@@ -1,0 +1,22 @@
+{% set variant = nav_variant|default('solid') %}
+<header class="nav {% if variant == 'hero' %}on-hero{% else %}is-solid{% endif %}" id="siteNav">
+  <div class="nav-side left">
+    <a href="/" class="nav-link">Shop</a>
+    <a href="/categories" class="nav-link">Categories</a>
+    <a href="/about" class="nav-link">About</a>
+  </div>
+  <a href="/" class="nav-logo">
+    <img src="/static/img/logo/{% if variant == 'hero' %}logo-light.png{% else %}logo-dark.png{% endif %}" alt="N Designs" id="navLogo">
+  </a>
+  <div class="nav-side right">
+    <button class="icon-btn" aria-label="Search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+    </button>
+    <button class="icon-btn" aria-label="Account">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.6-4 5-6 8-6s6.4 2 8 6"/></svg>
+    </button>
+    <a class="icon-btn" href="/cart" aria-label="Bag">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 8h12l-1 12H7L6 8z"/><path d="M9 8V6a3 3 0 016 0v2"/></svg>
+    </a>
+  </div>
+</header>

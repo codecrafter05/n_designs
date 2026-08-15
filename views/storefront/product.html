@@ -1,0 +1,169 @@
+{% extends "storefront/base.html" %}
+{% set nav_variant = "solid" %}
+
+{% block title %}The Layla Abaya — N Designs{% endblock %}
+
+{% block page_css %}<link rel="stylesheet" href="/static/css/pages/product.css">{% endblock %}
+
+{% block content %}
+<div class="wrap">
+  <nav class="breadcrumb">
+    <a href="/">Home</a><span class="sep">/</span>
+    <a href="/categories?c=abayas">Abayas</a><span class="sep">/</span>
+    <span>The Layla Abaya</span>
+  </nav>
+
+  <div class="pdp">
+    <div class="pdp-gallery">
+      <div class="ph tone-a main"></div>
+      <div class="pdp-thumbs">
+        <div class="ph tone-b" style="aspect-ratio:1;"></div>
+        <div class="ph tone-c" style="aspect-ratio:1;"></div>
+        <div class="ph tone-d" style="aspect-ratio:1;"></div>
+      </div>
+    </div>
+
+    <div class="pdp-info">
+      <span class="eyebrow">Abayas — Everyday</span>
+      <h1 class="pdp-title">The Layla Abaya</h1>
+      <div class="pdp-price">BHD 42.000</div>
+      <p class="pdp-desc">A relaxed, open-front silhouette in brushed crepe with a soft matte finish. Cut for movement, finished by hand in Manama.</p>
+
+      <div class="opt-block">
+        <div class="opt-label"><span>Colour — Black</span></div>
+        <div class="swatches">
+          <span class="swatch is-active" style="background:#131210;"></span>
+          <span class="swatch" style="background:#C9C0AC;"></span>
+          <span class="swatch" style="background:#3b3527;"></span>
+        </div>
+      </div>
+
+      <div class="opt-block">
+        <div class="opt-label">
+          <span>Size — Select</span>
+          <button type="button" data-open-size-guide>Size Guide</button>
+        </div>
+        <div class="sizes">
+          <span class="size-pill">XS</span>
+          <span class="size-pill is-active">S</span>
+          <span class="size-pill">M</span>
+          <span class="size-pill">L</span>
+          <span class="size-pill">XL</span>
+          <span class="size-pill is-out">XXL</span>
+        </div>
+      </div>
+
+      <div class="pdp-actions">
+        <button class="btn btn-primary btn-block">Add to Bag</button>
+        <a class="btn btn-ghost btn-block" href="{{ whatsapp_url }}" target="_blank">Ask About This Piece</a>
+      </div>
+
+      <div class="pdp-note">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="7" width="15" height="12" rx="1"/><path d="M18 10h2.5L23 13v6h-5"/><circle cx="7.5" cy="19" r="1.6"/><circle cx="18.5" cy="19" r="1.6"/></svg>
+        <span>Ships worldwide from Bahrain · 3–7 business days internationally</span>
+      </div>
+
+      <div class="accordion">
+        <div class="acc-item">
+          <button class="acc-trigger" data-acc-trigger>
+            <span>Features &amp; Fabric</span><span class="plus"></span>
+          </button>
+          <div class="acc-panel">
+            <div class="acc-panel-inner">
+              <ul>
+                <li>Brushed crepe, 260gsm — opaque, non-cling</li>
+                <li>Open front with internal tie, side pockets</li>
+                <li>Dropped shoulder for ease of movement</li>
+                <li>Hand-finished hem and cuffs</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div class="acc-item">
+          <button class="acc-trigger" data-acc-trigger>
+            <span>Shipping &amp; Returns</span><span class="plus"></span>
+          </button>
+          <div class="acc-panel">
+            <div class="acc-panel-inner">
+              <ul>
+                <li>Gulf: 1–3 business days</li>
+                <li>International: 3–7 business days</li>
+                <li>Free returns within 14 days, unworn with tags</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div class="acc-item">
+          <button class="acc-trigger is-link" data-open-size-guide>
+            <span>Size Guide</span><span class="plus"></span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="sizeModal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="sizeModalTitle">
+    <div class="modal-head">
+      <div>
+        <h3 class="modal-title" id="sizeModalTitle">Size Guide</h3>
+        <div class="modal-sub">The Layla Abaya · Measurements in cm</div>
+      </div>
+      <button class="modal-close" id="sizeModalClose" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <table class="size-table">
+      <thead>
+        <tr><th>Size</th><th>Bust</th><th>Waist</th><th>Length</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>XS</td><td>—</td><td>—</td><td>—</td></tr>
+        <tr><td>S</td><td>—</td><td>—</td><td>—</td></tr>
+        <tr><td>M</td><td>—</td><td>—</td><td>—</td></tr>
+        <tr><td>L</td><td>—</td><td>—</td><td>—</td></tr>
+        <tr><td>XL</td><td>—</td><td>—</td><td>—</td></tr>
+      </tbody>
+    </table>
+    <p class="modal-foot">Measurements are body measurements, not garment measurements. Still unsure? <a href="{{ whatsapp_url }}" style="text-decoration:underline;">Ask us on WhatsApp</a>.</p>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.querySelectorAll('.swatch').forEach(s=>{
+    s.addEventListener('click',()=>{
+      document.querySelectorAll('.swatch').forEach(x=>x.classList.remove('is-active'));
+      s.classList.add('is-active');
+    });
+  });
+  document.querySelectorAll('.size-pill:not(.is-out)').forEach(s=>{
+    s.addEventListener('click',()=>{
+      document.querySelectorAll('.size-pill').forEach(x=>x.classList.remove('is-active'));
+      s.classList.add('is-active');
+    });
+  });
+  document.querySelectorAll('[data-acc-trigger]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const item = btn.closest('.acc-item');
+      const panel = item.querySelector('.acc-panel');
+      const isOpen = item.classList.contains('is-open');
+      document.querySelectorAll('.acc-item.is-open').forEach(o=>{
+        o.classList.remove('is-open');
+        o.querySelector('.acc-panel').style.maxHeight = null;
+      });
+      if(!isOpen && panel){
+        item.classList.add('is-open');
+        panel.style.maxHeight = panel.scrollHeight + 'px';
+      }
+    });
+  });
+  const sizeModal = document.getElementById('sizeModal');
+  document.querySelectorAll('[data-open-size-guide]').forEach(btn=>{
+    btn.addEventListener('click',()=> sizeModal.classList.add('is-open'));
+  });
+  document.getElementById('sizeModalClose').addEventListener('click',()=> sizeModal.classList.remove('is-open'));
+  sizeModal.addEventListener('click', e=>{ if(e.target===sizeModal) sizeModal.classList.remove('is-open'); });
+  document.addEventListener('keydown', e=>{ if(e.key==='Escape') sizeModal.classList.remove('is-open'); });
+</script>
+{% endblock %}

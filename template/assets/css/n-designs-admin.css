@@ -1,0 +1,163 @@
+/* ============================================================
+   N Designs — admin overrides
+   Loaded after Maxton kit CSS so these rules win.
+   Neutral Semi Dark base, with green success / red danger for feedback.
+   ============================================================ */
+
+:root {
+  --admin-ink: #2b2b2f;
+}
+
+/* Theme lock */
+html, body {
+  min-height: 100vh;
+}
+body {
+  display: flex;
+  flex-direction: column;
+}
+.main-wrapper {
+  flex: 1 0 auto;
+}
+
+/* Buttons */
+.btn-admin-primary,
+.btn-admin-primary:hover,
+.btn-admin-primary:focus,
+.btn-admin-primary:active,
+.btn-admin-primary:disabled {
+  background: var(--admin-ink);
+  background-image: none;
+  color: #fff;
+  border: 1px solid var(--admin-ink);
+  box-shadow: none;
+}
+.btn-admin-primary:hover,
+.btn-admin-primary:focus,
+.btn-admin-primary:active {
+  background: var(--admin-ink);
+  border-color: var(--admin-ink);
+  color: #fff;
+}
+.btn-admin-primary:disabled { opacity: .65; }
+.btn-admin-primary .spinner-border { color: #fff; }
+
+.btn-admin-secondary,
+.btn-admin-secondary:hover,
+.btn-admin-secondary:focus,
+.btn-admin-secondary:active {
+  background: transparent;
+  background-image: none;
+  color: #111;
+  border: 1px solid #111;
+  box-shadow: none;
+}
+.btn-admin-secondary:hover,
+.btn-admin-secondary:focus,
+.btn-admin-secondary:active {
+  background: var(--admin-ink);
+  color: #fff;
+}
+
+.btn-admin-danger,
+.btn-admin-danger:hover,
+.btn-admin-danger:focus,
+.btn-admin-danger:active {
+  background: transparent;
+  background-image: none;
+  color: #b42318;
+  border: 1px solid #b42318;
+  box-shadow: none;
+}
+.btn-admin-danger:hover,
+.btn-admin-danger:focus,
+.btn-admin-danger:active {
+  background: #b42318;
+  color: #fff;
+}
+
+/* Alerts */
+.alert-admin,
+.alert-admin-success,
+.alert-admin-error {
+  border-radius: 10px;
+  margin-bottom: 1rem;
+}
+.alert-admin-success {
+  background: #e8f5e9;
+  color: #1b5e20;
+  border: 1px solid #81c784;
+}
+.alert-admin-error {
+  background: #fdecea;
+  color: #8a1c13;
+  border: 1px solid #e57373;
+}
+
+/* Breadcrumbs */
+.page-breadcrumb .breadcrumb-item a,
+.page-breadcrumb .breadcrumb-item a:hover,
+.page-breadcrumb .breadcrumb-item a:focus {
+  color: #6c757d;
+  text-decoration: none;
+}
+.page-breadcrumb .breadcrumb-item a:hover { color: #212529; }
+.page-breadcrumb .breadcrumb-item.active { color: #212529; }
+
+/* Footer */
+.page-footer {
+  position: relative;
+  left: auto;
+  right: auto;
+  bottom: auto;
+  margin-left: 260px;
+  flex-shrink: 0;
+}
+.toggled .page-footer {
+  left: auto;
+  margin-left: 70px;
+}
+@media only screen and (max-width: 1199px) {
+  .page-footer,
+  .toggled .page-footer {
+    left: auto;
+    margin-left: 0;
+  }
+}
+
+/* Login */
+.admin-login .page-footer,
+.admin-login.toggled .page-footer {
+  margin-left: 0;
+}
+.admin-login > .mx-3 {
+  flex: 1 0 auto;
+}
+.bg-admin-ink {
+  background: var(--admin-ink);
+  background-image: none;
+}
+
+/* Categories CRUD */
+.cat-toolbar { display:flex; align-items:center; justify-content:space-between; gap:1rem; }
+.cat-row { display:flex; align-items:center; gap:12px; }
+.cat-thumb {
+  width:48px; height:48px; border-radius:10px; object-fit:cover;
+  background:#e9ecef; flex-shrink:0;
+}
+.cat-thumb.placeholder {
+  display:flex; align-items:center; justify-content:center; color:#adb5bd;
+}
+.cat-handle { cursor:grab; color:#adb5bd; user-select:none; }
+.cat-handle:active { cursor:grabbing; }
+.cat-name { font-weight:600; margin:0; }
+.cat-actions { margin-left:auto; display:flex; gap:6px; }
+.sub-wrap { margin-left:36px; margin-top:12px; }
+.sub-list { display:flex; flex-direction:column; gap:8px; }
+.sortable-ghost { opacity:.45; }
+.toast-bar {
+  position:fixed; right:24px; bottom:24px; z-index:1080;
+  display:none; padding:10px 16px; border-radius:10px; font-size:14px;
+}
+.toast-bar.show { display:block; }
+.img-preview { max-width: 180px; max-height: 180px; border-radius: 12px; object-fit: cover; }

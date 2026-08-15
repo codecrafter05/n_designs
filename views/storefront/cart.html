@@ -1,0 +1,70 @@
+{% extends "storefront/base.html" %}
+{% set nav_variant = "solid" %}
+
+{% block title %}Your Bag — N Designs{% endblock %}
+
+{% block page_css %}<link rel="stylesheet" href="/static/css/pages/cart.css">{% endblock %}
+
+{% block content %}
+<div class="wrap">
+  <div class="cart-header">
+    <span class="eyebrow">Step 1 of 3</span>
+    <h1>Your Bag</h1>
+  </div>
+
+  <div class="cart-layout">
+    <div>
+      <div class="cart-item">
+        <div class="ph tone-a"></div>
+        <div class="ci-info">
+          <div class="name">The Layla Abaya</div>
+          <div class="meta">Black · Size S</div>
+          <div class="ci-qty">
+            <button aria-label="Decrease quantity">−</button><span>1</span><button aria-label="Increase quantity">+</button>
+          </div>
+          <button class="ci-remove">Remove</button>
+        </div>
+        <div class="ci-price">BHD 42.000</div>
+      </div>
+      <div class="cart-item">
+        <div class="ph tone-c"></div>
+        <div class="ci-info">
+          <div class="name">Rima Linen Jalabiya</div>
+          <div class="meta">Stone · Size M</div>
+          <div class="ci-qty">
+            <button aria-label="Decrease quantity">−</button><span>1</span><button aria-label="Increase quantity">+</button>
+          </div>
+          <button class="ci-remove">Remove</button>
+        </div>
+        <div class="ci-price">BHD 29.000</div>
+      </div>
+
+      <a href="/products" class="text-link" style="margin-top:26px;display:inline-flex;">← Continue shopping</a>
+    </div>
+
+    <aside class="summary">
+      <h3>Order Summary</h3>
+      <div class="summary-row"><span>Subtotal</span><span>BHD 71.000</span></div>
+      <div class="summary-row"><span>Shipping</span><span>Calculated at checkout</span></div>
+      <div class="promo">
+        <input type="text" placeholder="Promo code">
+        <button type="button">Apply</button>
+      </div>
+      <div class="summary-row total"><span>Total</span><span>BHD 71.000</span></div>
+      <a href="/checkout" class="btn btn-primary btn-block" style="margin-top:22px;">Checkout</a>
+      <a href="{{ whatsapp_url }}" class="btn btn-ghost btn-block" style="margin-top:10px;" target="_blank">Order via WhatsApp</a>
+    </aside>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.querySelectorAll('.ci-qty').forEach(q=>{
+    const span = q.querySelector('span');
+    let n = 1;
+    q.children[0].addEventListener('click',()=>{ if(n>1){n--; span.textContent=n;} });
+    q.children[2].addEventListener('click',()=>{ n++; span.textContent=n; });
+  });
+</script>
+{% endblock %}

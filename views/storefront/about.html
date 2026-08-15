@@ -1,0 +1,52 @@
+{% extends "storefront/base.html" %}
+{% set nav_variant = "solid" %}
+
+{% block title %}Our Story — N Designs{% endblock %}
+
+{% block page_css %}<link rel="stylesheet" href="/static/css/pages/about.css">{% endblock %}
+
+{% block content %}
+<div class="wrap">
+  <div class="about-hero">
+    <div class="ph tone-a"></div>
+    <div>
+      <span class="eyebrow">Our Story</span>
+      <h1>Designed in Manama,<br>worn everywhere.</h1>
+      <p>N Designs began as one woman's answer to a simple gap: modest wear that felt as considered as anything on the international runways she loved. Every abaya, jalabiya and dress we make starts from the same question — does it move well, does it last, and does it feel like you?</p>
+      <p style="margin-top:16px;">Today the collections travel from our studio in Bahrain to wardrobes across the Gulf, Europe and beyond, each piece cut, fitted and finished by hand in small batches.</p>
+    </div>
+  </div>
+
+  <div class="about-values">
+    <div class="value-card">
+      <span class="num">01</span>
+      <h3>Considered Fabric</h3>
+      <p>We work with brushed crepes, linen blends and matte satins chosen for how they move and travel, not just how they photograph.</p>
+    </div>
+    <div class="value-card">
+      <span class="num">02</span>
+      <h3>Small Batches</h3>
+      <p>Every collection is produced in limited runs, cut and finished by hand in our Manama studio — never mass-produced.</p>
+    </div>
+    <div class="value-card">
+      <span class="num">03</span>
+      <h3>Made to Travel</h3>
+      <p>Packed and shipped from Bahrain to the Gulf and internationally, with the same care whether you're two streets or two continents away.</p>
+    </div>
+  </div>
+</div>
+
+<section class="about-quote">
+  <div class="wrap">
+    <blockquote>"Quiet elegance isn't the absence of statement — it's a statement made once, well."</blockquote>
+    <cite>— Founder, N Designs</cite>
+  </div>
+</section>
+
+<div class="about-strip" aria-hidden="true">
+  <div class="ph tone-b"></div>
+  <div class="ph tone-c"></div>
+  <div class="ph tone-d"></div>
+  <div class="ph tone-a"></div>
+</div>
+{% endblock %}

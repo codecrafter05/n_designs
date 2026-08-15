@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}N Designs{% endblock %}</title>
+  <link rel="icon" href="/static/img/logo/logo-dark.png" type="image/png">
+  <link rel="stylesheet" href="/static/css/style.css">
+  {% block page_css %}{% endblock %}
+</head>
+<body>
+
+  {% include "storefront/components/nav.html" %}
+  {% if nav_variant|default('solid') != 'hero' %}
+  <div class="sf-nav-spacer"></div>
+  {% endif %}
+
+  {% block content %}{% endblock %}
+
+  {% include "storefront/components/footer.html" %}
+  {% include "storefront/components/whatsapp_button.html" %}
+
+  <script src="/static/js/script.js"></script>
+  {% block extra_js %}{% endblock %}
+
+</body>
+</html>

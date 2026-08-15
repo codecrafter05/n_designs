@@ -1,0 +1,50 @@
+{% extends "storefront/base.html" %}
+{% set nav_variant = "solid" %}
+
+{% block title %}Terms &amp; Conditions — N Designs{% endblock %}
+
+{% block page_css %}<link rel="stylesheet" href="/static/css/pages/terms.css">{% endblock %}
+
+{% block content %}
+<div class="wrap terms-layout">
+  <div class="terms-header">
+    <span class="eyebrow">Legal</span>
+    <h1>Terms &amp; Conditions</h1>
+    <p>Last updated August 2026</p>
+  </div>
+
+  <nav class="toc">
+    <a href="#orders">Orders &amp; Payment</a>
+    <a href="#shipping">Shipping</a>
+    <a href="#returns">Returns &amp; Exchanges</a>
+    <a href="#sizing">Sizing</a>
+    <a href="#privacy">Privacy</a>
+    <a href="#contact">Contact</a>
+  </nav>
+
+  <div class="terms-body">
+    <h2 id="orders">Orders &amp; Payment</h2>
+    <p>By placing an order with N Designs you confirm that the details provided are accurate and that you are authorised to use the selected payment method. Orders are confirmed once payment has been received in full.</p>
+
+    <h2 id="shipping">Shipping</h2>
+    <p>Orders within the Gulf typically arrive within 1–3 business days; international orders within 3–7 business days. Shipping costs are calculated at checkout based on destination and order weight.</p>
+    <ul>
+      <li>Bahrain: free shipping over BHD 30</li>
+      <li>GCC: flat rate, shown at checkout</li>
+      <li>International: calculated by destination</li>
+    </ul>
+
+    <h2 id="returns">Returns &amp; Exchanges</h2>
+    <p>Unworn items with tags attached may be returned within 14 days of delivery for a refund or exchange. Occasion pieces marked as final sale are not eligible for return.</p>
+
+    <h2 id="sizing">Sizing</h2>
+    <p>Each product page includes a size guide with body measurements. If you are between sizes, we recommend sizing up for our relaxed-fit abayas and jalabiyas. For guidance, reach us on WhatsApp before ordering.</p>
+
+    <h2 id="privacy">Privacy</h2>
+    <p>We collect only the information needed to process and deliver your order. We do not sell customer data to third parties. Payment details are handled securely by our payment provider and are never stored on our servers.</p>
+
+    <h2 id="contact">Contact</h2>
+    <p>For questions about these terms, reach us at hello@ndesigns.bh or via WhatsApp using the button on any page.</p>
+  </div>
+</div>
+{% endblock %}

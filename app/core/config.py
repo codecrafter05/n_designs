@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 480
     ALGORITHM: str = "HS256"
+    WHATSAPP_NUMBER: str = "97300000000"
 
     @computed_field  # type: ignore[prop-decorator]
     @property

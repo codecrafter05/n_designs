@@ -1,0 +1,18 @@
+{% extends "storefront/base.html" %}
+{% set nav_variant = "solid" %}
+
+{% block title %}Page Not Found — N Designs{% endblock %}
+
+{% block page_css %}<link rel="stylesheet" href="/static/css/pages/404.css">{% endblock %}
+
+{% block content %}
+<div class="nf">
+  <span class="code">404</span>
+  <h1>This piece isn't here.</h1>
+  <p>The page you're looking for may have moved, sold out, or never existed. Let's get you back to something beautiful.</p>
+  <div class="nf-actions">
+    <a href="/" class="btn btn-primary">Back to Home</a>
+    <a href="/categories" class="btn btn-ghost">Browse Categories</a>
+  </div>
+</div>
+{% endblock %}

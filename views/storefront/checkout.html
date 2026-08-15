@@ -1,0 +1,94 @@
+{% extends "storefront/base.html" %}
+{% set nav_variant = "solid" %}
+
+{% block title %}Checkout — N Designs{% endblock %}
+
+{% block page_css %}<link rel="stylesheet" href="/static/css/pages/checkout.css">{% endblock %}
+
+{% block content %}
+<div class="wrap">
+  <div class="co-steps">
+    <span>Bag</span><span class="sep">—</span>
+    <span class="active">Checkout</span><span class="sep">—</span>
+    <span>Confirmation</span>
+  </div>
+  <a href="/cart" class="text-link" style="display:inline-flex;margin-top:4px;">← Back to Bag</a>
+
+  <form class="co-layout" onsubmit="return false;">
+    <div>
+      <fieldset>
+        <legend>Contact</legend>
+        <div class="field-row">
+          <div class="field full"><label for="email">Email</label><input id="email" type="email" required></div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Shipping Address</legend>
+        <div class="field-row">
+          <div class="field"><label for="fn">First name</label><input id="fn" type="text" required></div>
+          <div class="field"><label for="ln">Last name</label><input id="ln" type="text" required></div>
+        </div>
+        <div class="field-row">
+          <div class="field full"><label for="addr">Address</label><input id="addr" type="text" required></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label for="city">City</label><input id="city" type="text" required></div>
+          <div class="field"><label for="country">Country</label>
+            <select id="country">
+              <option>Bahrain</option>
+              <option>Saudi Arabia</option>
+              <option>United Arab Emirates</option>
+              <option>Kuwait</option>
+              <option>Other</option>
+            </select>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field full"><label for="phone">Phone</label><input id="phone" type="tel" required></div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Payment</legend>
+        <div class="pay-options">
+          <label class="pay-option is-active"><input type="radio" name="pay" checked> Credit / Debit Card</label>
+          <label class="pay-option"><input type="radio" name="pay"> BenefitPay</label>
+          <label class="pay-option"><input type="radio" name="pay"> Cash on Delivery</label>
+        </div>
+      </fieldset>
+
+      <button class="btn btn-primary btn-block" type="submit">Place Order — BHD 74.500</button>
+    </div>
+
+    <aside class="summary">
+      <h3>Order Summary</h3>
+      <div class="mini-item">
+        <div class="ph tone-a"></div>
+        <div><div class="n">The Layla Abaya</div><div class="m">Black · S · Qty 1</div></div>
+        <div class="p">BHD 42.000</div>
+      </div>
+      <div class="mini-item">
+        <div class="ph tone-c"></div>
+        <div><div class="n">Rima Linen Jalabiya</div><div class="m">Stone · M · Qty 1</div></div>
+        <div class="p">BHD 29.000</div>
+      </div>
+      <div class="summary-row"><span>Subtotal</span><span>BHD 71.000</span></div>
+      <div class="summary-row"><span>Shipping</span><span>BHD 3.500</span></div>
+      <div class="summary-row total"><span>Total</span><span>BHD 74.500</span></div>
+    </aside>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.querySelectorAll('.pay-option').forEach(o=>{
+    o.addEventListener('click',()=>{
+      document.querySelectorAll('.pay-option').forEach(x=>x.classList.remove('is-active'));
+      o.classList.add('is-active');
+      o.querySelector('input').checked = true;
+    });
+  });
+</script>
+{% endblock %}

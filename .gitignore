@@ -8,3 +8,5 @@ dist/
 build/
 *.log
 .DS_Store
+static/uploads/categories/*
+!static/uploads/categories/.gitkeep
