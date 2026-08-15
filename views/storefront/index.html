@@ -42,6 +42,7 @@
   </div>
 </section>
 
+{% if top_categories %}
 <section class="section" style="padding-top:0;">
   <div class="wrap">
     <div class="section-head">
@@ -53,33 +54,25 @@
   </div>
   <div class="wrap">
     <div class="cat-grid">
-      <a href="/categories?c=abayas" class="cat-card">
-        <div class="ph tone-b"></div>
+      {% set tones = ['a', 'b', 'c', 'd'] %}
+      {% for category in top_categories %}
+      <a href="/categories/{{ category.slug }}" class="cat-card">
+        {% if category.image_url %}
+        <img class="ph" src="{{ category.image_url }}" alt="">
+        {% else %}
+        <div class="ph tone-{{ tones[loop.index0 % 4] }}"></div>
+        {% endif %}
         <div class="cat-card-inner">
-          <div class="t">Abayas</div>
-          <div class="n">6 collections</div>
+          <div class="t">{{ category.name }}</div>
+          <div class="n">{{ category.subcategory_count }} collection{% if category.subcategory_count != 1 %}s{% endif %}</div>
           <div class="arrow"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
         </div>
       </a>
-      <a href="/categories?c=dresses" class="cat-card">
-        <div class="ph tone-d"></div>
-        <div class="cat-card-inner">
-          <div class="t">Dresses</div>
-          <div class="n">4 collections</div>
-          <div class="arrow"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
-        </div>
-      </a>
-      <a href="/categories?c=jalabiyas" class="cat-card">
-        <div class="ph tone-a"></div>
-        <div class="cat-card-inner">
-          <div class="t">Jalabiyas</div>
-          <div class="n">5 collections</div>
-          <div class="arrow"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
-        </div>
-      </a>
+      {% endfor %}
     </div>
   </div>
 </section>
+{% endif %}
 
 <section class="section" id="new-arrivals">
   <div class="wrap">

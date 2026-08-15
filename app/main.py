@@ -8,7 +8,13 @@ from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.v1.router import router
-from app.api.v1.endpoints.web import router as web_router, storefront_context, templates
+from app.api.v1.endpoints.web import (
+    router as web_router,
+    storefront_context,
+    templates,
+    top_categories_with_child_counts,
+)
+from app.core.database import SessionLocal
 from app.api.v1.endpoints.admin_categories import router as admin_categories_router
 
 TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "..", "template")
@@ -58,8 +64,17 @@ async def custom_http_exception_handler(request: Request, exc: StarletteHTTPExce
         return JSONResponse({"detail": exc.detail}, status_code=404)
     if path.startswith("/admin"):
         return PlainTextResponse("Not Found", status_code=404)
+    db = SessionLocal()
+    try:
+        footer_categories = top_categories_with_child_counts(db)
+    finally:
+        db.close()
     return templates.TemplateResponse(
         "storefront/404.html",
-        storefront_context(request, nav_variant="solid"),
+        storefront_context(
+            request,
+            nav_variant="solid",
+            footer_categories=footer_categories,
+        ),
         status_code=404,
     )

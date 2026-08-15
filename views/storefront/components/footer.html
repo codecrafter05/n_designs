@@ -12,9 +12,13 @@
     <div class="footer-col">
       <h4>Shop</h4>
       <ul>
-        <li><a href="/categories?c=abayas">Abayas</a></li>
-        <li><a href="/categories?c=dresses">Dresses</a></li>
-        <li><a href="/categories?c=jalabiyas">Jalabiyas</a></li>
+        {% if footer_categories %}
+        {% for cat in footer_categories %}
+        <li><a href="/categories/{{ cat.slug }}">{{ cat.name }}</a></li>
+        {% endfor %}
+        {% else %}
+        <li><a href="/categories">Shop</a></li>
+        {% endif %}
         <li><a href="/#new-arrivals">New Arrivals</a></li>
       </ul>
     </div>

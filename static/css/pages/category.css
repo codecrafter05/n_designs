@@ -5,6 +5,8 @@
 .sub-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;background:var(--line);margin-top:2px;}
 .sub-card{position:relative;aspect-ratio:3/3.6;overflow:hidden;display:flex;align-items:flex-end;}
 .sub-card .ph{position:absolute;inset:0;transition:transform .8s var(--ease);}
+.sub-card img.ph{width:100%;height:100%;object-fit:cover;}
+.cat-empty{padding:64px 0 110px;color:var(--ink-70);font-size:14px;}
 .sub-card:hover .ph{transform:scale(1.05);}
 .sub-card-inner{
   position:relative;z-index:2;padding:26px;width:100%;color:var(--on-dark);

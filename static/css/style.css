@@ -207,11 +207,12 @@ h1,h2,h3{font-family:var(--serif);font-weight:400;margin:0;letter-spacing:-.01em
 .ph.tone-d{background:linear-gradient(165deg,#c9c0ac 0%, #efeadc 55%, #9c7c4b 140%);}
 
 /* ---------------- Categories ---------------- */
-.cat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;background:var(--line);}
+.cat-grid{display:grid;grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));gap:2px;background:var(--line);}
 .cat-card{
   position:relative;aspect-ratio:3/4.1;overflow:hidden;display:flex;align-items:flex-end;
 }
 .cat-card .ph{position:absolute;inset:0;transition:transform .9s var(--ease);}
+.cat-card img.ph{width:100%;height:100%;object-fit:cover;}
 .cat-card:hover .ph{transform:scale(1.05);}
 .cat-card-inner{
   position:relative;z-index:2;padding:28px;width:100%;
