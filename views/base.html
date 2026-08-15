@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-bs-theme="blue-theme">
+<html lang="en" data-bs-theme="semi-dark">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -16,11 +16,39 @@
   <link href="https://fonts.googleapis.com/css?family=Material+Icons+Outlined" rel="stylesheet">
   <link href="/assets/css/bootstrap-extended.css" rel="stylesheet">
   <link href="/sass/main.css" rel="stylesheet">
-  <link href="/sass/dark-theme.css" rel="stylesheet">
-  <link href="/sass/blue-theme.css" rel="stylesheet">
   <link href="/sass/semi-dark.css" rel="stylesheet">
-  <link href="/sass/bordered-theme.css" rel="stylesheet">
   <link href="/sass/responsive.css" rel="stylesheet">
+  <style>
+    html, body {
+      min-height: 100vh;
+    }
+    body {
+      display: flex;
+      flex-direction: column;
+    }
+    .main-wrapper {
+      flex: 1 0 auto;
+    }
+    .page-footer {
+      position: relative;
+      left: auto;
+      right: auto;
+      bottom: auto;
+      margin-left: 260px;
+      flex-shrink: 0;
+    }
+    .toggled .page-footer {
+      left: auto;
+      margin-left: 70px;
+    }
+    @media only screen and (max-width: 1199px) {
+      .page-footer,
+      .toggled .page-footer {
+        left: auto;
+        margin-left: 0;
+      }
+    }
+  </style>
   {% block extra_css %}{% endblock %}
 </head>
 

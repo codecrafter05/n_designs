@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-bs-theme="blue-theme">
+<html lang="en" data-bs-theme="semi-dark">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -13,9 +13,28 @@
   <link href="https://fonts.googleapis.com/css?family=Material+Icons+Outlined" rel="stylesheet">
   <link href="/assets/css/bootstrap-extended.css" rel="stylesheet">
   <link href="/sass/main.css" rel="stylesheet">
-  <link href="/sass/dark-theme.css" rel="stylesheet">
-  <link href="/sass/blue-theme.css" rel="stylesheet">
+  <link href="/sass/semi-dark.css" rel="stylesheet">
   <link href="/sass/responsive.css" rel="stylesheet">
+  <style>
+    html, body {
+      min-height: 100vh;
+    }
+    body {
+      display: flex;
+      flex-direction: column;
+    }
+    body > .mx-3 {
+      flex: 1 0 auto;
+    }
+    .page-footer {
+      position: relative;
+      left: auto;
+      right: auto;
+      bottom: auto;
+      margin-left: 0;
+      flex-shrink: 0;
+    }
+  </style>
 </head>
 
 <body>
@@ -135,5 +154,9 @@
       }
     });
   </script>
+
+  <footer class="page-footer">
+    <p class="mb-0">N Designs © 2026</p>
+  </footer>
 </body>
 </html>
