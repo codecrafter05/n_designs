@@ -1,8 +1,6 @@
-# FastAPI + MySQL Starter
+# N Designs
 
-A clean, production-ready FastAPI boilerplate with MySQL, JWT authentication, Alembic migrations, and a Jinja2 HTML frontend built on a Bootstrap 5 admin template.
-
-Use this as a starting point for any new project — pull it, configure `.env`, run migrations, and start building.
+Clothing e-commerce backend for N Designs — FastAPI, MySQL, JWT authentication, Alembic migrations, and a Jinja2 storefront plus admin.
 
 ---
 
@@ -42,7 +40,7 @@ project/
 │       └── endpoints/
 │           ├── health.py       # GET /api/v1/health, GET /api/v1/db-check
 │           ├── auth.py         # POST /api/v1/auth/login, GET /api/v1/auth/me
-│           └── web.py          # HTML page routes (/, /login, /dashboard)
+│           └── web.py          # HTML page routes (/, /admin/login, /admin/dashboard)
 │
 ├── views/                      # Jinja2 HTML templates
 │   ├── base.html               # Base layout (shared scripts, auth guard, logout)
@@ -147,9 +145,9 @@ uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 
 | URL | Description |
 |---|---|
-| `http://127.0.0.1:8000/` | Redirects to `/login` |
-| `http://127.0.0.1:8000/login` | Login page |
-| `http://127.0.0.1:8000/dashboard` | Dashboard (requires login) |
+| `http://127.0.0.1:8000/` | Storefront homepage |
+| `http://127.0.0.1:8000/admin/login` | Admin login |
+| `http://127.0.0.1:8000/admin/dashboard` | Admin dashboard (requires login) |
 | `http://127.0.0.1:8000/docs` | Swagger UI (API docs) |
 
 ---
@@ -222,7 +220,7 @@ def your_page(request: Request):
 | `views/components/sidebar.html` | Sidebar nav — included via `{% include %}` in base |
 | `views/login.html` | Standalone (does not extend base — different layout) |
 
-The auth guard in `base.html` automatically redirects any page to `/login` if no JWT token is found in `localStorage`.
+The auth guard in `base.html` automatically redirects any admin page to `/admin/login` if no JWT token is found in `localStorage`.
 
 ---
 

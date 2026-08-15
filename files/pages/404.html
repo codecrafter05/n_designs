@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Page Not Found — N Designs</title>
+<link rel="stylesheet" href="../static/css/style.css">
+<style>
+  .nf-nav-spacer{height:88px;}
+  .nf{
+    min-height:calc(100svh - 88px);display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;padding:40px var(--gutter) 100px;
+  }
+  .nf .code{
+    font-family:var(--serif);font-style:italic;font-size:clamp(80px,14vw,180px);line-height:1;
+    color:transparent;-webkit-text-stroke:1px var(--ink-45);
+  }
+  .nf h1{font-size:clamp(24px,3vw,34px);margin:6px 0 14px;}
+  .nf p{color:var(--ink-70);font-size:14px;max-width:44ch;margin-bottom:34px;}
+  .nf-actions{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;}
+</style>
+</head>
+<body>
+
+<header class="nav is-solid" id="siteNav">
+  <div class="nav-side left"></div>
+  <a href="index.html" class="nav-logo"><img src="../static/img/logo/logo-dark.png" alt="N Designs"></a>
+  <div class="nav-side right"></div>
+</header>
+<div class="nf-nav-spacer"></div>
+
+<div class="nf">
+  <span class="code">404</span>
+  <h1>This piece isn't here.</h1>
+  <p>The page you're looking for may have moved, sold out, or never existed. Let's get you back to something beautiful.</p>
+  <div class="nf-actions">
+    <a href="index.html" class="btn btn-primary">Back to Home</a>
+    <a href="category.html" class="btn btn-ghost">Browse Categories</a>
+  </div>
+</div>
+
+<script src="../static/js/script.js"></script>
+</body>
+</html>

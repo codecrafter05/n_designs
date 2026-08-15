@@ -2,7 +2,7 @@
 Create or update the initial admin user.
 
 Usage:
-    ADMIN_EMAIL=admin@podcafe.local ADMIN_PASSWORD=changeme python scripts/create_admin.py
+    ADMIN_EMAIL=admin@n-designs.local ADMIN_PASSWORD=changeme python scripts/create_admin.py
 """
 import os
 import sys
@@ -18,7 +18,7 @@ from app.core.database import SessionLocal
 from app.core.security import hash_password
 from app.models.user import User
 
-ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@podcafe.local")
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@n-designs.local")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
 
 if not ADMIN_PASSWORD:
