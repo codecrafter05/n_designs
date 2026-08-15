@@ -20,10 +20,6 @@
     <div class="card-body p-4">
       <h4 class="fw-bold mb-3">{{ 'Edit category' if category else 'Add category' }}</h4>
 
-      {% if error %}
-      <div class="alert alert-admin-error">{{ error }}</div>
-      {% endif %}
-
       <form method="post"
             action="{{ '/admin/dashboard/categories/' ~ category.id if category else '/admin/dashboard/categories' }}"
             enctype="multipart/form-data">

@@ -93,6 +93,108 @@
     });
   </script>
 
+  {% include "admin/components/toast.html" %}
+  {% include "admin/components/confirm-modal.html" %}
+  <script>
+    (function () {
+      var el = document.getElementById('adminToast');
+      if (!el) return;
+      var textEl = el.querySelector('.toast-text');
+      var hideTimer;
+
+      function hideToast() {
+        el.classList.remove('show');
+      }
+
+      window.showAdminToast = function (text, ok) {
+        clearTimeout(hideTimer);
+        textEl.textContent = text;
+        el.className = 'toast-bar show ' + (ok ? 'alert-admin-success' : 'alert-admin-error');
+        hideTimer = setTimeout(hideToast, 5000);
+      };
+
+      el.querySelector('.toast-close').addEventListener('click', function () {
+        clearTimeout(hideTimer);
+        hideToast();
+      });
+
+      var params = new URLSearchParams(window.location.search);
+      var notice = params.get('notice');
+      var error = params.get('error');
+      if (notice) window.showAdminToast(notice, true);
+      if (error) window.showAdminToast(error, false);
+      if (notice || error) {
+        params.delete('notice');
+        params.delete('error');
+        var qs = params.toString();
+        history.replaceState({}, '', window.location.pathname + (qs ? '?' + qs : '') + window.location.hash);
+      }
+    })();
+  </script>
+  <script>
+    (function () {
+      var overlay = document.getElementById('adminConfirm');
+      if (!overlay) return;
+      var titleEl = document.getElementById('adminConfirmTitle');
+      var messageEl = document.getElementById('adminConfirmMessage');
+      var cancelBtn = overlay.querySelector('[data-confirm-cancel]');
+      var okBtn = overlay.querySelector('[data-confirm-ok]');
+      var resolveFn = null;
+
+      function close(result) {
+        overlay.classList.remove('is-open');
+        overlay.hidden = true;
+        document.removeEventListener('keydown', onKey);
+        if (resolveFn) {
+          var done = resolveFn;
+          resolveFn = null;
+          done(result);
+        }
+      }
+
+      function onKey(e) {
+        if (e.key === 'Escape') close(false);
+      }
+
+      window.confirmAction = function (opts) {
+        opts = opts || {};
+        titleEl.textContent = opts.title || 'Please confirm';
+        messageEl.textContent = opts.message || '';
+        cancelBtn.textContent = opts.cancelLabel || 'Cancel';
+        okBtn.textContent = opts.confirmLabel || 'Confirm';
+        okBtn.className = 'btn ' + (opts.danger === false ? 'btn-admin-primary' : 'btn-admin-danger');
+        overlay.hidden = false;
+        requestAnimationFrame(function () { overlay.classList.add('is-open'); });
+        document.addEventListener('keydown', onKey);
+        okBtn.focus();
+        return new Promise(function (resolve) { resolveFn = resolve; });
+      };
+
+      cancelBtn.addEventListener('click', function () { close(false); });
+      okBtn.addEventListener('click', function () { close(true); });
+      overlay.addEventListener('click', function (e) {
+        if (e.target === overlay) close(false);
+      });
+
+      document.addEventListener('submit', function (e) {
+        var form = e.target;
+        if (!form.getAttribute || !form.hasAttribute('data-confirm')) return;
+        if (form.getAttribute('data-confirm-accepted') === '1') return;
+        e.preventDefault();
+        window.confirmAction({
+          title: form.getAttribute('data-confirm-title') || 'Please confirm',
+          message: form.getAttribute('data-confirm-message') || '',
+          confirmLabel: form.getAttribute('data-confirm-label') || 'Confirm',
+          danger: form.getAttribute('data-confirm-danger') !== 'false'
+        }).then(function (ok) {
+          if (!ok) return;
+          form.setAttribute('data-confirm-accepted', '1');
+          form.submit();
+        });
+      });
+    })();
+  </script>
+
   {% block extra_js %}{% endblock %}
 
 </body>

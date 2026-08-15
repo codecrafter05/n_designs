@@ -20,13 +20,6 @@
     <a href="/admin/dashboard/categories/new" class="btn btn-admin-primary">Add Category</a>
   </div>
 
-  {% if notice %}
-  <div class="alert alert-admin-success">{{ notice }}</div>
-  {% endif %}
-  {% if error %}
-  <div class="alert alert-admin-error">{{ error }}</div>
-  {% endif %}
-
   {% if not categories %}
   <div class="card rounded-4">
     <div class="card-body text-center py-5">
@@ -51,7 +44,11 @@
           <p class="cat-name">{{ cat.name }}</p>
           <div class="cat-actions">
             <a href="/admin/dashboard/categories/{{ cat.id }}/edit" class="btn btn-sm btn-admin-secondary">Edit</a>
-            <form method="post" action="/admin/dashboard/categories/{{ cat.id }}/delete" class="d-inline" onsubmit="return confirm('Delete this category?');">
+            <form method="post" action="/admin/dashboard/categories/{{ cat.id }}/delete" class="d-inline"
+                  data-confirm
+                  data-confirm-title="Delete category"
+                  data-confirm-message="Delete this category? This cannot be undone."
+                  data-confirm-label="Delete">
               <button type="submit" class="btn btn-sm btn-admin-danger">Delete</button>
             </form>
           </div>
@@ -72,7 +69,11 @@
                   <p class="cat-name">{{ sub.name }}</p>
                   <div class="cat-actions">
                     <a href="/admin/dashboard/categories/{{ sub.id }}/edit" class="btn btn-sm btn-admin-secondary">Edit</a>
-                    <form method="post" action="/admin/dashboard/categories/{{ sub.id }}/delete" class="d-inline" onsubmit="return confirm('Delete this subcategory?');">
+                    <form method="post" action="/admin/dashboard/categories/{{ sub.id }}/delete" class="d-inline"
+                          data-confirm
+                          data-confirm-title="Delete subcategory"
+                          data-confirm-message="Delete this subcategory? This cannot be undone."
+                          data-confirm-label="Delete">
                       <button type="submit" class="btn btn-sm btn-admin-danger">Delete</button>
                     </form>
                   </div>
@@ -89,20 +90,12 @@
   </div>
   {% endif %}
 
-  <div id="orderToast" class="toast-bar alert-admin-success mb-0">Order saved</div>
 {% endblock %}
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
 <script>
 (function () {
-  const toast = document.getElementById('orderToast');
-  function showToast(text, ok) {
-    toast.textContent = text;
-    toast.className = 'toast-bar mb-0 show ' + (ok ? 'alert-admin-success' : 'alert-admin-error');
-    setTimeout(function () { toast.classList.remove('show'); }, 2200);
-  }
-
   function token() {
     return localStorage.getItem('access_token') || '';
   }
@@ -127,9 +120,9 @@
           body: JSON.stringify({ parent_id: parentId, ordered_ids: ids })
         }).then(function (res) {
           if (!res.ok) throw new Error('save failed');
-          showToast('Order saved', true);
+          window.showAdminToast('Order saved', true);
         }).catch(function () {
-          showToast('Could not save order — reloading', false);
+          window.showAdminToast('Could not save order — reloading', false);
           setTimeout(function () { window.location.reload(); }, 600);
         });
       }
