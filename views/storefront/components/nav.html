@@ -1,6 +1,12 @@
 {% set variant = nav_variant|default('solid') %}
 <header class="nav {% if variant == 'hero' %}on-hero{% else %}is-solid{% endif %}" id="siteNav">
   <div class="nav-side left">
+    <button class="icon-btn nav-menu-btn" type="button" id="navMenuBtn"
+            aria-label="Menu" aria-expanded="false" aria-controls="navDrawer">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M4 7h16M4 12h16M4 17h16"/>
+      </svg>
+    </button>
     <a href="/" class="nav-link">Shop</a>
     <a href="/categories" class="nav-link">Categories</a>
     <a href="/collections" class="nav-link">Collections</a>
@@ -22,3 +28,22 @@
     </a>
   </div>
 </header>
+
+<div class="nav-drawer-overlay" id="navDrawerOverlay" hidden></div>
+<aside class="nav-drawer" id="navDrawer" aria-hidden="true">
+  <div class="nav-drawer-head">
+    <img src="/static/img/logo/logo-dark-one.png" alt="N Designs">
+    <button class="icon-btn" type="button" id="navDrawerClose" aria-label="Close menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M6 6l12 12M18 6L6 18"/>
+      </svg>
+    </button>
+  </div>
+  <nav class="nav-drawer-links">
+    <a href="/">Shop</a>
+    <a href="/categories">Categories</a>
+    <a href="/collections">Collections</a>
+    <a href="/sale">Sale</a>
+    <a href="/about">About</a>
+  </nav>
+</aside>
