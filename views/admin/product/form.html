@@ -71,7 +71,7 @@
                      {% if product and product.is_featured %}checked{% endif %}>
               <label class="form-check-label" for="is_featured">Featured Piece</label>
             </div>
-            <div class="form-text">Featured products appear in the homepage's Featured Pieces section.</div>
+            <div class="form-text">Featured products appear in the homepage's Featured Pieces section. Maximum {{ featured_limit }} at a time.</div>
           </div>
         </div>
       </div>
@@ -101,6 +101,29 @@
 (function () {
   var INITIAL_INVENTORY = JSON.parse({{ inventory_json | tojson }});
   var INITIAL_GALLERY = JSON.parse({{ gallery_json | tojson }});
+  var featuredLimit = {{ featured_limit }};
+  var featuredCount = {{ featured_count }};
+  var thisFeatured = {{ 'true' if product and product.is_featured else 'false' }};
+  var featuredInput = document.getElementById('is_featured');
+  if (featuredInput) {
+    featuredInput.addEventListener('change', function () {
+      var others = featuredCount - (thisFeatured ? 1 : 0);
+      if (featuredInput.checked && others >= featuredLimit) {
+        featuredInput.checked = false;
+        var message = 'You already have ' + featuredLimit + ' featured products. Turn one off before featuring another.';
+        if (window.confirmAction) {
+          window.confirmAction({
+            title: 'Featured limit reached',
+            message: message,
+            confirmLabel: 'OK',
+            danger: false
+          });
+        } else if (window.showAdminToast) {
+          window.showAdminToast(message, false);
+        }
+      }
+    });
+  }
   var galleryEl = document.getElementById('gallery');
   var inventoryEl = document.getElementById('inventory');
   var galleryItems = [];

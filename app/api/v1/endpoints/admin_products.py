@@ -7,6 +7,7 @@ from urllib.parse import urlencode
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
@@ -17,6 +18,18 @@ from app.models.category import Category
 from app.models.product import Product, ProductColor, ProductImage, ProductVariant
 
 router = APIRouter(tags=["admin-products"])
+
+FEATURED_LIMIT = 3
+FEATURED_LIMIT_MSG = (
+    "You already have 3 featured products. Turn one off before featuring another."
+)
+
+
+def _featured_count(db: Session, exclude_id: int | None = None) -> int:
+    query = db.query(func.count(Product.id)).filter(Product.is_featured.is_(True))
+    if exclude_id is not None:
+        query = query.filter(Product.id != exclude_id)
+    return query.scalar() or 0
 
 _PROJECT_ROOT = os.path.normpath(
     os.path.join(os.path.dirname(__file__), "..", "..", "..", "..")
@@ -297,6 +310,8 @@ def _form_context(
         "inventory_json": _inventory_dump(product),
         "gallery_json": _gallery_dump(product),
         "error": request.query_params.get("error"),
+        "featured_count": _featured_count(db),
+        "featured_limit": FEATURED_LIMIT,
     }
     if extra:
         ctx.update(extra)
@@ -355,6 +370,8 @@ def products_list(request: Request, db: Session = Depends(get_db)):
             "rows": [_summarize(product) for product in products],
             "notice": request.query_params.get("notice"),
             "error": request.query_params.get("error"),
+            "featured_count": _featured_count(db),
+            "featured_limit": FEATURED_LIMIT,
         },
     )
 
@@ -451,6 +468,22 @@ def products_toggle(product_id: int, db: Session = Depends(get_db)):
     return _redirect("/admin/products", notice=f"Product marked {state}.")
 
 
+@router.post("/admin/products/{product_id}/toggle-featured", include_in_schema=False)
+def products_toggle_featured(product_id: int, db: Session = Depends(get_db)):
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if product is None:
+        return _redirect("/admin/products", error="Product not found.")
+    if product.is_featured:
+        product.is_featured = False
+        db.commit()
+        return _redirect("/admin/products", notice="Removed from featured.")
+    if _featured_count(db) >= FEATURED_LIMIT:
+        return _redirect("/admin/products", error=FEATURED_LIMIT_MSG)
+    product.is_featured = True
+    db.commit()
+    return _redirect("/admin/products", notice="Marked as featured.")
+
+
 @router.post("/admin/products/{product_id}/delete", include_in_schema=False)
 def products_delete(product_id: int, db: Session = Depends(get_db)):
     product = _load_product(db, product_id)
@@ -508,6 +541,12 @@ async def _save_product(
         return _redirect(error_path, error=str(exc))
 
     is_create = product is None
+    want_featured = is_featured == "1"
+    if want_featured:
+        exclude_id = None if is_create else product.id
+        if _featured_count(db, exclude_id=exclude_id) >= FEATURED_LIMIT:
+            return _redirect(error_path, error=FEATURED_LIMIT_MSG)
+
     saved_urls: list[str] = []
     pending_delete: list[str] = []
     new_images = new_images or []

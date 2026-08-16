@@ -69,11 +69,14 @@
                 {% endif %}
               </td>
               <td>
-                {% if row.product.is_featured %}
-                <span class="alert-admin-success d-inline-block px-2 py-1 mb-0">Featured</span>
-                {% else %}
-                <span class="text-secondary">—</span>
-                {% endif %}
+                <form method="post" action="/admin/products/{{ row.product.id }}/toggle-featured" class="mb-0 js-featured-toggle">
+                  <div class="form-check form-switch mb-0">
+                    <input class="form-check-input" type="checkbox" role="switch"
+                           {% if row.product.is_featured %}checked{% endif %}
+                           data-was-featured="{{ '1' if row.product.is_featured else '0' }}">
+                    <label class="form-check-label">{{ 'On' if row.product.is_featured else 'Off' }}</label>
+                  </div>
+                </form>
               </td>
               <td>{{ row.stock }}</td>
               <td>
@@ -106,4 +109,41 @@
     </div>
   </div>
   {% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  var limit = {{ featured_limit }};
+  var count = {{ featured_count }};
+  var message = 'You already have ' + limit + ' featured products. Turn one off before featuring another.';
+
+  function warnLimit() {
+    if (window.confirmAction) {
+      window.confirmAction({
+        title: 'Featured limit reached',
+        message: message,
+        confirmLabel: 'OK',
+        danger: false
+      });
+    } else if (window.showAdminToast) {
+      window.showAdminToast(message, false);
+    }
+  }
+
+  document.querySelectorAll('.js-featured-toggle').forEach(function (form) {
+    var input = form.querySelector('input[type="checkbox"]');
+    if (!input) return;
+    input.addEventListener('change', function () {
+      var wasFeatured = input.getAttribute('data-was-featured') === '1';
+      if (input.checked && !wasFeatured && count >= limit) {
+        input.checked = false;
+        warnLimit();
+        return;
+      }
+      form.submit();
+    });
+  });
+})();
+</script>
 {% endblock %}

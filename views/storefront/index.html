@@ -91,7 +91,7 @@
   <div class="wrap">
     <div class="edit-grid">
       {% for card in featured_pieces %}
-      <a href="/product/{{ card.slug }}" class="edit-card{% if loop.first %} tall{% endif %}">
+      <a href="/product/{{ card.slug }}" class="edit-card{% if loop.first and featured_pieces|length > 1 %} tall{% endif %}">
         {% if card.thumb %}
         <img class="ph" src="{{ card.thumb }}" alt="">
         {% else %}
