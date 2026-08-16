@@ -284,6 +284,7 @@ h1,h2,h3{font-family:var(--serif);font-weight:400;margin:0;letter-spacing:-.01em
 .footer-grid{
   display:grid;grid-template-columns:1.4fr repeat(3,1fr);gap:40px;padding-bottom:64px;
 }
+.footer-logo{height:160px;width:auto;display:block;}
 .footer-brand p{color:var(--on-dark-60);font-size:13px;max-width:32ch;margin-top:16px;}
 .footer-social{display:flex;gap:14px;margin-top:26px;}
 .footer-social a{
