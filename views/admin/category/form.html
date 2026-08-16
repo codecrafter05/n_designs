@@ -42,6 +42,17 @@
           <div class="form-text">Leave empty to create a top-level category. Products will attach to subcategories later.</div>
         </div>
 
+        <div class="mb-3" id="homepage-toggle-wrap" {% if not selected_parent_id %}hidden{% endif %}>
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" role="switch" value="1"
+                   id="show_on_homepage" name="show_on_homepage"
+                   {% if category and category.show_on_homepage %}checked{% endif %}
+                   {% if not selected_parent_id %}disabled{% endif %}>
+            <label class="form-check-label" for="show_on_homepage">Show on homepage</label>
+          </div>
+          <div class="form-text">Featured subcategories appear in the homepage's Subcategory Spotlight section.</div>
+        </div>
+
         <div class="mb-4">
           <label class="form-label" for="image">Cover image</label>
           {% if category and category.image_url %}
@@ -60,4 +71,22 @@
       </form>
     </div>
   </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  var select = document.getElementById('parent_id');
+  var wrap = document.getElementById('homepage-toggle-wrap');
+  var input = document.getElementById('show_on_homepage');
+  if (!select || !wrap || !input) return;
+  function sync() {
+    var isSub = Boolean(select.value);
+    wrap.hidden = !isSub;
+    input.disabled = !isSub;
+  }
+  select.addEventListener('change', sync);
+  sync();
+})();
+</script>
 {% endblock %}

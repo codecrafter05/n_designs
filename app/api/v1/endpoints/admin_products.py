@@ -373,6 +373,7 @@ async def products_create(
     description: str | None = Form(None),
     category_id: str = Form(...),
     is_active: str | None = Form(None),
+    is_featured: str | None = Form(None),
     inventory_json: str = Form(...),
     gallery_json: str = Form("[]"),
     new_images: list[UploadFile] | None = File(None),
@@ -385,6 +386,7 @@ async def products_create(
         description=description,
         category_id=category_id,
         is_active=is_active,
+        is_featured=is_featured,
         inventory_json=inventory_json,
         gallery_json=gallery_json,
         new_images=new_images,
@@ -414,6 +416,7 @@ async def products_update(
     description: str | None = Form(None),
     category_id: str = Form(...),
     is_active: str | None = Form(None),
+    is_featured: str | None = Form(None),
     inventory_json: str = Form(...),
     gallery_json: str = Form("[]"),
     new_images: list[UploadFile] | None = File(None),
@@ -429,6 +432,7 @@ async def products_update(
         description=description,
         category_id=category_id,
         is_active=is_active,
+        is_featured=is_featured,
         inventory_json=inventory_json,
         gallery_json=gallery_json,
         new_images=new_images,
@@ -487,6 +491,7 @@ async def _save_product(
     description: str | None,
     category_id: str,
     is_active: str | None,
+    is_featured: str | None,
     inventory_json: str,
     gallery_json: str,
     new_images: list[UploadFile],
@@ -515,6 +520,7 @@ async def _save_product(
                 category_id=resolved_category.id,
                 base_price=Decimal("0.000"),
                 is_active=is_active == "1",
+                is_featured=is_featured == "1",
             )
             db.add(product)
             db.flush()
@@ -524,6 +530,7 @@ async def _save_product(
             product.description = (description or "").strip() or None
             product.category_id = resolved_category.id
             product.is_active = is_active == "1"
+            product.is_featured = is_featured == "1"
 
         min_price = _sync_inventory(db, product, colors_data)
         product.base_price = min_price

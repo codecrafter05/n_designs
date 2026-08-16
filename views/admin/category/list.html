@@ -67,6 +67,9 @@
                   <div class="cat-thumb placeholder"><span class="material-icons-outlined">image</span></div>
                   {% endif %}
                   <p class="cat-name">{{ sub.name }}</p>
+                  {% if sub.show_on_homepage %}
+                  <span class="alert-admin-success d-inline-block px-2 py-1 mb-0">Homepage</span>
+                  {% endif %}
                   <div class="cat-actions">
                     <a href="/admin/categories/{{ sub.id }}/edit" class="btn btn-sm btn-admin-secondary">Edit</a>
                     <form method="post" action="/admin/categories/{{ sub.id }}/delete" class="d-inline"

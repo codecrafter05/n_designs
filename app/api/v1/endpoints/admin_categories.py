@@ -110,6 +110,7 @@ def categories_new(request: Request, db: Session = Depends(get_db), parent_id: i
 async def categories_create(
     name: str = Form(...),
     parent_id: str | None = Form(None),
+    show_on_homepage: str | None = Form(None),
     image: UploadFile | None = File(None),
     db: Session = Depends(get_db),
 ):
@@ -134,6 +135,7 @@ async def categories_create(
         parent_id=resolved_parent,
         image_url=image_url,
         display_order=_next_display_order(db, resolved_parent),
+        show_on_homepage=bool(resolved_parent) and show_on_homepage == "1",
     )
     db.add(category)
     db.commit()
@@ -197,6 +199,7 @@ async def categories_update(
     category_id: int,
     name: str = Form(...),
     parent_id: str | None = Form(None),
+    show_on_homepage: str | None = Form(None),
     image: UploadFile | None = File(None),
     db: Session = Depends(get_db),
 ):
@@ -252,6 +255,7 @@ async def categories_update(
     category.name = name
     category.slug = unique_slug(db, Category, name, exclude_id=category.id)
     category.parent_id = resolved_parent
+    category.show_on_homepage = bool(resolved_parent) and show_on_homepage == "1"
     db.commit()
     return _redirect("/admin/categories", notice="Category updated.")
 

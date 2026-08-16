@@ -49,6 +49,38 @@ def top_categories_with_child_counts(db: Session) -> list[Category]:
     return categories
 
 
+def homepage_featured_subcategories(db: Session) -> list[Category]:
+    """Subcategories flagged for the homepage that have at least one active product.
+
+    One query: EXISTS filter + correlated COUNT subquery. No N+1.
+    """
+    has_active_product = exists().where(
+        Product.category_id == Category.id,
+        Product.is_active.is_(True),
+    )
+    product_count = (
+        select(func.count(Product.id))
+        .where(Product.category_id == Category.id, Product.is_active.is_(True))
+        .scalar_subquery()
+        .label("product_count")
+    )
+    rows = (
+        db.query(Category, product_count)
+        .filter(
+            Category.parent_id.isnot(None),
+            Category.show_on_homepage.is_(True),
+            has_active_product,
+        )
+        .order_by(Category.display_order, Category.id)
+        .all()
+    )
+    categories = []
+    for category, count in rows:
+        category.product_count = count
+        categories.append(category)
+    return categories
+
+
 _TONES = ("a", "b", "c", "d")
 
 
@@ -180,8 +212,15 @@ def _storefront_page(
 @router.get("/", response_class=HTMLResponse, include_in_schema=False)
 def storefront_home(request: Request, db: Session = Depends(get_db)):
     top_categories = top_categories_with_child_counts(db)
+    spotlight_subcategories = homepage_featured_subcategories(db)
     products = _active_products(db)
-    cards = [_product_card(product, i) for i, product in enumerate(products)]
+    featured = (
+        _product_query(db)
+        .filter(Product.is_active.is_(True), Product.is_featured.is_(True))
+        .order_by(Product.created_at.desc(), Product.id.desc())
+        .limit(3)
+        .all()
+    )
     return _storefront_page(
         request,
         "storefront/index.html",
@@ -189,8 +228,9 @@ def storefront_home(request: Request, db: Session = Depends(get_db)):
         nav_variant="hero",
         top_categories=top_categories,
         footer_categories=top_categories,
-        seasonal_edit=cards[:3],
-        new_arrivals=cards[:8],
+        spotlight_subcategories=spotlight_subcategories,
+        featured_pieces=[_product_card(product, i) for i, product in enumerate(featured)],
+        new_arrivals=[_product_card(product, i) for i, product in enumerate(products[:8])],
     )
 
 

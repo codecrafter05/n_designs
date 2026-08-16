@@ -40,6 +40,7 @@
               <th scope="col">Category</th>
               <th scope="col">Price</th>
               <th scope="col">Sale</th>
+              <th scope="col">Featured</th>
               <th scope="col">Stock</th>
               <th scope="col">Status</th>
               <th scope="col"></th>
@@ -63,6 +64,13 @@
               <td>
                 {% if row.on_sale %}
                 <span class="alert-admin-success d-inline-block px-2 py-1 mb-0">On sale</span>
+                {% else %}
+                <span class="text-secondary">—</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if row.product.is_featured %}
+                <span class="alert-admin-success d-inline-block px-2 py-1 mb-0">Featured</span>
                 {% else %}
                 <span class="text-secondary">—</span>
                 {% endif %}

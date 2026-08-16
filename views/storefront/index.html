@@ -14,39 +14,8 @@
   <div class="hero-scroll"><span class="line"></span> Scroll</div>
 </section>
 
-{% if seasonal_edit %}
-<section class="section" id="edit">
-  <div class="wrap">
-    <div class="section-head">
-      <div>
-        <span class="eyebrow">The Season</span>
-        <h2 class="section-title">Autumn Edit</h2>
-      </div>
-      <a href="{% if seasonal_edit[0].subcategory_slug %}/products/{{ seasonal_edit[0].subcategory_slug }}{% else %}/categories{% endif %}" class="text-link">View the collection →</a>
-    </div>
-  </div>
-  <div class="wrap">
-    <div class="edit-grid">
-      {% for card in seasonal_edit %}
-      <a href="/product/{{ card.slug }}" class="edit-card{% if loop.first %} tall{% endif %}">
-        {% if card.thumb %}
-        <img class="ph" src="{{ card.thumb }}" alt="">
-        {% else %}
-        <div class="ph tone-{{ card.tone }}"></div>
-        {% endif %}
-        <div class="edit-card-label">
-          <div class="k">{{ card.subcategory or card.tag }}</div>
-          <div class="t">{{ card.name }}</div>
-        </div>
-      </a>
-      {% endfor %}
-    </div>
-  </div>
-</section>
-{% endif %}
-
 {% if top_categories %}
-<section class="section" style="padding-top:0;">
+<section class="section">
   <div class="wrap">
     <div class="section-head">
       <div>
@@ -69,6 +38,68 @@
           <div class="t">{{ category.name }}</div>
           <div class="n">{{ category.subcategory_count }} collection{% if category.subcategory_count != 1 %}s{% endif %}</div>
           <div class="arrow"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+{% if spotlight_subcategories %}
+<section class="section" id="edit">
+  <div class="wrap">
+    <div class="section-head">
+      <div>
+        <span class="eyebrow">Curated</span>
+        <h2 class="section-title">Shop the Edit</h2>
+      </div>
+    </div>
+  </div>
+  <div class="wrap">
+    <div class="cat-grid">
+      {% set tones = ['a', 'b', 'c', 'd'] %}
+      {% for category in spotlight_subcategories %}
+      <a href="/products/{{ category.slug }}" class="cat-card">
+        {% if category.image_url %}
+        <img class="ph" src="{{ category.image_url }}" alt="">
+        {% else %}
+        <div class="ph tone-{{ tones[loop.index0 % 4] }}"></div>
+        {% endif %}
+        <div class="cat-card-inner">
+          <div class="t">{{ category.name }}</div>
+          <div class="n">{{ category.product_count }} piece{% if category.product_count != 1 %}s{% endif %}</div>
+          <div class="arrow"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+{% if featured_pieces %}
+<section class="section" id="featured">
+  <div class="wrap">
+    <div class="section-head">
+      <div>
+        <span class="eyebrow">Handpicked</span>
+        <h2 class="section-title">Featured Pieces</h2>
+      </div>
+    </div>
+  </div>
+  <div class="wrap">
+    <div class="edit-grid">
+      {% for card in featured_pieces %}
+      <a href="/product/{{ card.slug }}" class="edit-card{% if loop.first %} tall{% endif %}">
+        {% if card.thumb %}
+        <img class="ph" src="{{ card.thumb }}" alt="">
+        {% else %}
+        <div class="ph tone-{{ card.tone }}"></div>
+        {% endif %}
+        <div class="edit-card-label">
+          <div class="k">{{ card.subcategory or card.tag }}</div>
+          <div class="t">{{ card.name }}</div>
         </div>
       </a>
       {% endfor %}

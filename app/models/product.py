@@ -46,6 +46,7 @@ class Product(Base):
     # migration once nothing reads this column.
     base_price: Mapped[float] = mapped_column(Numeric(12, 3), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    is_featured: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc), nullable=False
     )
