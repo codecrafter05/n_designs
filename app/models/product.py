@@ -110,9 +110,14 @@ class ProductImage(Base):
 class ProductVariant(Base):
     """Sellable SKU. Out of stock = stock_quantity 0; the row stays visible.
 
-    Price is per size+color combination. A variant is on sale when
-    compare_at_price IS NOT NULL AND compare_at_price > price. That flag is
-    computed at query time from these two columns — never stored separately.
+    `price` is the regular/normal price. `compare_at_price` is the optional
+    discounted selling price (column name kept; UI label is "Discount").
+    A variant is on sale when compare_at_price IS NOT NULL AND
+    compare_at_price < price. Computed at query time — never stored separately.
+
+    When on sale, compare_at_price is the payable price and price is the
+    original shown struck through. When compare_at_price is empty, price
+    is the payable price.
     """
 
     __tablename__ = "product_variants"

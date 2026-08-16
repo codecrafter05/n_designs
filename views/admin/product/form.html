@@ -75,7 +75,7 @@
           <h5 class="mb-0">Inventory</h5>
           <button type="button" class="btn btn-admin-primary" id="add-color">Add Color</button>
         </div>
-        <p class="form-text mt-0 mb-3">Each color can have its own sizes, stock, and prices. Compare-at price is optional — if it’s higher than price, that size is on sale.</p>
+        <p class="form-text mt-0 mb-3">Price is the regular price. Discount is optional — fill it with a lower price to put that size on sale, leave it empty otherwise.</p>
         <div id="inventory" class="d-flex flex-column gap-3"></div>
       </div>
     </div>
@@ -171,7 +171,7 @@
     var p = parseFloat(price);
     var c = parseFloat(compare);
     if (!compare || isNaN(c) || isNaN(p)) return '';
-    if (c > p) return 'sale';
+    if (c < p) return 'sale';
     return 'warn';
   }
 
@@ -198,12 +198,12 @@
               '<input class="form-control v-price" type="number" min="0" step="0.001" placeholder="0.000" value="' + escapeHtml(price) + '">' +
             '</div>' +
             '<div class="col-md-2">' +
-              '<label class="form-label">Compare at</label>' +
-              '<input class="form-control v-compare" type="number" min="0" step="0.001" placeholder="Optional" value="' + escapeHtml(compare) + '">' +
+              '<label class="form-label">Discount</label>' +
+              '<input class="form-control v-compare" type="number" min="0" step="0.001" placeholder="Optional — lower sale price" value="' + escapeHtml(compare) + '">' +
             '</div>' +
             '<div class="col-md-auto">' +
               '<span class="form-text prod-sale-chip mb-0' + (state === 'sale' ? ' is-on' : '') + (state === 'warn' ? ' is-warn' : '') + '">' +
-                (state === 'sale' ? 'On sale' : state === 'warn' ? 'Must be higher' : '') +
+                (state === 'sale' ? 'On sale' : state === 'warn' ? 'Must be lower' : '') +
               '</span>' +
             '</div>' +
             '<div class="col-md-auto ms-md-auto">' +
@@ -218,7 +218,7 @@
       var next = saleState(row.querySelector('.v-price').value, row.querySelector('.v-compare').value);
       chip.classList.toggle('is-on', next === 'sale');
       chip.classList.toggle('is-warn', next === 'warn');
-      chip.textContent = next === 'sale' ? 'On sale' : next === 'warn' ? 'Must be higher' : '';
+      chip.textContent = next === 'sale' ? 'On sale' : next === 'warn' ? 'Must be lower' : '';
     }
     row.querySelector('.v-price').addEventListener('input', refreshChip);
     row.querySelector('.v-compare').addEventListener('input', refreshChip);
@@ -297,7 +297,7 @@
         if (!(p > 0)) { error = 'Price for “' + name + ' / ' + size + '” must be greater than zero.'; return; }
         if (compare) {
           var c = parseFloat(compare);
-          if (!(c > p)) { error = 'Compare-at for “' + name + ' / ' + size + '” must be higher than price.'; return; }
+          if (!(c < p)) { error = 'Discount for “' + name + ' / ' + size + '” must be lower than price.'; return; }
         }
         var q = parseInt(qty, 10);
         if (isNaN(q) || q < 0) { error = 'Quantity must be zero or more.'; return; }

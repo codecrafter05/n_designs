@@ -14,6 +14,10 @@ Admin helper: `confirmAction({ title, message, confirmLabel, cancelLabel, danger
 
 Approved references: Categories list/form (`views/admin/category/`), Maxton `form-layouts.html`, `form-elements.html`, `form-repeater.html`, `form-radios-and-checkboxes.html`, `table-basic-table.html`, `ecommerce-products.html`.
 
+## Product pricing
+
+`ProductVariant.price` is the regular price. `ProductVariant.compare_at_price` is the optional discounted selling price (UI label: **Discount**; column name unchanged). A variant is on sale when `compare_at_price IS NOT NULL AND compare_at_price < price`. When on sale, `compare_at_price` is what the customer pays and `price` is shown struck through. When the discount field is empty, `price` is the payable price.
+
 ## URL conventions
 
 Admin section pages live directly under `/admin/{section}`, not `/admin/dashboard/{section}`. Only the dashboard home page itself is `/admin/dashboard`.

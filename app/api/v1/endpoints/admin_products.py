@@ -91,9 +91,11 @@ def _optional_compare(raw, price: Decimal) -> Decimal | None:
     try:
         value = Decimal(str(raw).strip()).quantize(Decimal("0.001"))
     except (InvalidOperation, ValueError) as exc:
-        raise ValueError("Compare-at price must be a number.") from exc
-    if value <= price:
-        raise ValueError("Compare-at price must be greater than the current price.")
+        raise ValueError("Discount must be a number.") from exc
+    if value <= 0:
+        raise ValueError("Discount must be greater than zero.")
+    if value >= price:
+        raise ValueError("Discount must be lower than the regular price.")
     return value
 
 
@@ -341,7 +343,7 @@ def _summarize(product: Product) -> dict:
     thumb = product.images[0].image_url if product.images else None
     on_sale = any(
         variant.compare_at_price is not None
-        and variant.compare_at_price > variant.price
+        and variant.compare_at_price < variant.price
         for variant in variants
     )
     return {
