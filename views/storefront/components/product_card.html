@@ -1,0 +1,20 @@
+<a href="/product/{{ card.slug }}" class="prod-card">
+  <div class="prod-figure">
+    {% if card.tag %}<span class="prod-tag">{{ card.tag }}</span>{% endif %}
+    {% if card.on_sale %}<span class="prod-sale">Sale</span>{% endif %}
+    {% if card.thumb %}
+    <img class="ph" src="{{ card.thumb }}" alt="">
+    {% else %}
+    <div class="ph tone-{{ card.tone }}"></div>
+    {% endif %}
+    <div class="prod-quick">Quick View</div>
+  </div>
+  <div class="prod-name">{{ card.name }}</div>
+  <div class="prod-meta">
+    <span>{{ card.color_summary }}</span>
+    <span class="prod-price">
+      {% if card.on_sale and card.was_label %}<span class="was">{{ card.was_label }}</span>{% endif %}
+      {{ card.price_label }}
+    </span>
+  </div>
+</a>

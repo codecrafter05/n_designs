@@ -1,7 +1,7 @@
 {% extends "storefront/base.html" %}
 {% set nav_variant = "solid" %}
 
-{% block title %}The Layla Abaya — N Designs{% endblock %}
+{% block title %}{{ product.name }} — N Designs{% endblock %}
 
 {% block page_css %}<link rel="stylesheet" href="/static/css/pages/product.css">{% endblock %}
 
@@ -9,54 +9,65 @@
 <div class="wrap">
   <nav class="breadcrumb">
     <a href="/">Home</a><span class="sep">/</span>
-    <a href="/categories">Categories</a><span class="sep">/</span>
-    <span>The Layla Abaya</span>
+    {% if parent %}
+    <a href="/categories/{{ parent.slug }}">{{ parent.name }}</a><span class="sep">/</span>
+    {% endif %}
+    {% if product.category %}
+    <a href="/products/{{ product.category.slug }}">{{ product.category.name }}</a><span class="sep">/</span>
+    {% endif %}
+    <span>{{ product.name }}</span>
   </nav>
 
   <div class="pdp">
     <div class="pdp-gallery">
-      <div class="ph tone-a main"></div>
+      {% if product.images %}
+      <img class="ph main" id="pdpMain" src="{{ product.images[0].image_url }}" alt="{{ product.name }}">
+      {% if product.images|length > 1 %}
       <div class="pdp-thumbs">
-        <div class="ph tone-b" style="aspect-ratio:1;"></div>
-        <div class="ph tone-c" style="aspect-ratio:1;"></div>
-        <div class="ph tone-d" style="aspect-ratio:1;"></div>
+        {% for image in product.images %}
+        <img class="ph{% if loop.first %} is-active{% endif %}" src="{{ image.image_url }}" alt="" data-pdp-thumb>
+        {% endfor %}
       </div>
+      {% endif %}
+      {% else %}
+      <div class="ph tone-a main"></div>
+      {% endif %}
     </div>
 
     <div class="pdp-info">
-      <span class="eyebrow">Abayas — Everyday</span>
-      <h1 class="pdp-title">The Layla Abaya</h1>
-      <div class="pdp-price">BHD 42.000</div>
-      <p class="pdp-desc">A relaxed, open-front silhouette in brushed crepe with a soft matte finish. Cut for movement, finished by hand in Manama.</p>
+      <span class="eyebrow">
+        {% if parent %}{{ parent.name }}{% endif %}{% if parent and product.category %} — {% endif %}{% if product.category %}{{ product.category.name }}{% endif %}
+      </span>
+      <h1 class="pdp-title">{{ product.name }}</h1>
+      <div class="pdp-price" id="pdpPrice"></div>
+      {% if product.description %}
+      <p class="pdp-desc">{{ product.description }}</p>
+      {% endif %}
 
-      <div class="opt-block">
-        <div class="opt-label"><span>Colour — Black</span></div>
-        <div class="swatches">
-          <span class="swatch is-active" style="background:#131210;"></span>
-          <span class="swatch" style="background:#C9C0AC;"></span>
-          <span class="swatch" style="background:#3b3527;"></span>
-        </div>
+      {% if available %}
+      <div class="opt-block" id="colorBlock">
+        <div class="opt-label"><span id="colorLabel">Colour</span></div>
+        <div class="swatches" id="swatches"></div>
       </div>
 
       <div class="opt-block">
         <div class="opt-label">
-          <span>Size — Select</span>
+          <span id="sizeLabel">Size — Select</span>
           <button type="button" data-open-size-guide>Size Guide</button>
         </div>
-        <div class="sizes">
-          <span class="size-pill">XS</span>
-          <span class="size-pill is-active">S</span>
-          <span class="size-pill">M</span>
-          <span class="size-pill">L</span>
-          <span class="size-pill">XL</span>
-          <span class="size-pill is-out">XXL</span>
-        </div>
+        <div class="sizes" id="sizes"></div>
       </div>
 
       <div class="pdp-actions">
-        <button class="btn btn-primary btn-block">Add to Bag</button>
-        <a class="btn btn-ghost btn-block" href="{{ whatsapp_url }}" target="_blank">Ask About This Piece</a>
+        <button class="btn btn-primary btn-block" type="button">Add to Bag</button>
+        <a class="btn btn-ghost btn-block" href="{{ whatsapp_url }}" target="_blank" rel="noopener">Ask About This Piece</a>
       </div>
+      {% else %}
+      <p class="pdp-unavailable">Currently unavailable</p>
+      <div class="pdp-actions">
+        <a class="btn btn-ghost btn-block" href="{{ whatsapp_url }}" target="_blank" rel="noopener">Ask About This Piece</a>
+      </div>
+      {% endif %}
 
       <div class="pdp-note">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="7" width="15" height="12" rx="1"/><path d="M18 10h2.5L23 13v6h-5"/><circle cx="7.5" cy="19" r="1.6"/><circle cx="18.5" cy="19" r="1.6"/></svg>
@@ -64,21 +75,18 @@
       </div>
 
       <div class="accordion">
+        {% if product.description %}
         <div class="acc-item">
           <button class="acc-trigger" data-acc-trigger>
             <span>Features &amp; Fabric</span><span class="plus"></span>
           </button>
           <div class="acc-panel">
             <div class="acc-panel-inner">
-              <ul>
-                <li>Brushed crepe, 260gsm — opaque, non-cling</li>
-                <li>Open front with internal tie, side pockets</li>
-                <li>Dropped shoulder for ease of movement</li>
-                <li>Hand-finished hem and cuffs</li>
-              </ul>
+              <p>{{ product.description }}</p>
             </div>
           </div>
         </div>
+        {% endif %}
         <div class="acc-item">
           <button class="acc-trigger" data-acc-trigger>
             <span>Shipping &amp; Returns</span><span class="plus"></span>
@@ -108,7 +116,7 @@
     <div class="modal-head">
       <div>
         <h3 class="modal-title" id="sizeModalTitle">Size Guide</h3>
-        <div class="modal-sub">The Layla Abaya · Measurements in cm</div>
+        <div class="modal-sub">{{ product.name }} · Measurements in cm</div>
       </div>
       <button class="modal-close" id="sizeModalClose" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
@@ -131,39 +139,137 @@
 
 {% block extra_js %}
 <script>
-  document.querySelectorAll('.swatch').forEach(s=>{
-    s.addEventListener('click',()=>{
-      document.querySelectorAll('.swatch').forEach(x=>x.classList.remove('is-active'));
-      s.classList.add('is-active');
+(function () {
+  var CATALOG = JSON.parse({{ catalog_json | tojson }});
+  var swatchesEl = document.getElementById('swatches');
+  var sizesEl = document.getElementById('sizes');
+  var priceEl = document.getElementById('pdpPrice');
+  var colorLabel = document.getElementById('colorLabel');
+  var sizeLabel = document.getElementById('sizeLabel');
+  var colorIndex = 0;
+  var sizeIndex = 0;
+
+  function firstInStock(variants) {
+    for (var i = 0; i < variants.length; i++) {
+      if (variants[i].stock > 0) return i;
+    }
+    return 0;
+  }
+
+  function renderPrice(variant) {
+    if (!variant) {
+      priceEl.innerHTML = '';
+      return;
+    }
+    if (variant.was_label) {
+      priceEl.innerHTML = variant.current_label + ' <span class="was">' + variant.was_label + '</span>';
+    } else {
+      priceEl.textContent = variant.current_label;
+    }
+  }
+
+  function renderSizes() {
+    var color = CATALOG.colors[colorIndex];
+    if (!color) return;
+    var variants = color.variants || [];
+    sizesEl.innerHTML = '';
+    if (!variants.length) {
+      sizeLabel.textContent = 'Size';
+      sizesEl.innerHTML = '<p class="pdp-unavailable">No sizes for this colour</p>';
+      renderPrice(null);
+      return;
+    }
+    if (sizeIndex >= variants.length) sizeIndex = firstInStock(variants);
+    variants.forEach(function (variant, i) {
+      var pill = document.createElement('span');
+      pill.className = 'size-pill';
+      pill.textContent = variant.size;
+      if (variant.stock <= 0) {
+        pill.classList.add('is-out');
+        pill.title = 'Out of Stock';
+      } else if (i === sizeIndex) {
+        pill.classList.add('is-active');
+      }
+      if (variant.stock > 0) {
+        pill.addEventListener('click', function () {
+          sizeIndex = i;
+          renderSizes();
+        });
+      }
+      sizesEl.appendChild(pill);
     });
-  });
-  document.querySelectorAll('.size-pill:not(.is-out)').forEach(s=>{
-    s.addEventListener('click',()=>{
-      document.querySelectorAll('.size-pill').forEach(x=>x.classList.remove('is-active'));
-      s.classList.add('is-active');
-    });
-  });
-  document.querySelectorAll('[data-acc-trigger]').forEach(btn=>{
-    btn.addEventListener('click',()=>{
-      const item = btn.closest('.acc-item');
-      const panel = item.querySelector('.acc-panel');
-      const isOpen = item.classList.contains('is-open');
-      document.querySelectorAll('.acc-item.is-open').forEach(o=>{
-        o.classList.remove('is-open');
-        o.querySelector('.acc-panel').style.maxHeight = null;
+    var selected = variants[sizeIndex];
+    sizeLabel.textContent = selected ? 'Size — ' + selected.size : 'Size — Select';
+    renderPrice(selected);
+  }
+
+  function renderSwatches() {
+    if (!swatchesEl) return;
+    swatchesEl.innerHTML = '';
+    CATALOG.colors.forEach(function (color, i) {
+      var swatch = document.createElement('span');
+      swatch.className = 'swatch' + (i === colorIndex ? ' is-active' : '');
+      swatch.style.background = color.hex;
+      swatch.title = color.name;
+      swatch.addEventListener('click', function () {
+        colorIndex = i;
+        sizeIndex = firstInStock(color.variants || []);
+        renderSwatches();
+        renderSizes();
       });
-      if(!isOpen && panel){
+      swatchesEl.appendChild(swatch);
+    });
+    var current = CATALOG.colors[colorIndex];
+    if (current && colorLabel) colorLabel.textContent = 'Colour — ' + current.name;
+  }
+
+  if (CATALOG.colors && CATALOG.colors.length) {
+    sizeIndex = firstInStock(CATALOG.colors[0].variants || []);
+    renderSwatches();
+    renderSizes();
+  }
+
+  document.querySelectorAll('[data-pdp-thumb]').forEach(function (thumb) {
+    thumb.addEventListener('click', function () {
+      var main = document.getElementById('pdpMain');
+      if (!main) return;
+      main.src = thumb.src;
+      document.querySelectorAll('[data-pdp-thumb]').forEach(function (el) {
+        el.classList.toggle('is-active', el === thumb);
+      });
+    });
+  });
+
+  document.querySelectorAll('[data-acc-trigger]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var item = btn.closest('.acc-item');
+      var panel = item.querySelector('.acc-panel');
+      var isOpen = item.classList.contains('is-open');
+      document.querySelectorAll('.acc-item.is-open').forEach(function (open) {
+        open.classList.remove('is-open');
+        var openPanel = open.querySelector('.acc-panel');
+        if (openPanel) openPanel.style.maxHeight = null;
+      });
+      if (!isOpen && panel) {
         item.classList.add('is-open');
         panel.style.maxHeight = panel.scrollHeight + 'px';
       }
     });
   });
-  const sizeModal = document.getElementById('sizeModal');
-  document.querySelectorAll('[data-open-size-guide]').forEach(btn=>{
-    btn.addEventListener('click',()=> sizeModal.classList.add('is-open'));
+
+  var sizeModal = document.getElementById('sizeModal');
+  document.querySelectorAll('[data-open-size-guide]').forEach(function (btn) {
+    btn.addEventListener('click', function () { sizeModal.classList.add('is-open'); });
   });
-  document.getElementById('sizeModalClose').addEventListener('click',()=> sizeModal.classList.remove('is-open'));
-  sizeModal.addEventListener('click', e=>{ if(e.target===sizeModal) sizeModal.classList.remove('is-open'); });
-  document.addEventListener('keydown', e=>{ if(e.key==='Escape') sizeModal.classList.remove('is-open'); });
+  document.getElementById('sizeModalClose').addEventListener('click', function () {
+    sizeModal.classList.remove('is-open');
+  });
+  sizeModal.addEventListener('click', function (e) {
+    if (e.target === sizeModal) sizeModal.classList.remove('is-open');
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') sizeModal.classList.remove('is-open');
+  });
+})();
 </script>
 {% endblock %}

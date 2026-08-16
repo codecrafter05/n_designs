@@ -1,7 +1,7 @@
 {% extends "storefront/base.html" %}
 {% set nav_variant = "solid" %}
 
-{% block title %}Everyday Abayas — N Designs{% endblock %}
+{% block title %}{{ subcategory.name }} — N Designs{% endblock %}
 
 {% block page_css %}<link rel="stylesheet" href="/static/css/pages/products.css">{% endblock %}
 
@@ -9,30 +9,38 @@
 <div class="wrap">
   <nav class="breadcrumb" style="padding-top:0;">
     <a href="/">Home</a><span class="sep">/</span>
+    {% if parent %}
+    <a href="/categories/{{ parent.slug }}">{{ parent.name }}</a><span class="sep">/</span>
+    {% else %}
     <a href="/categories">Categories</a><span class="sep">/</span>
-    <span>Everyday Abayas</span>
+    {% endif %}
+    <span>{{ subcategory.name }}</span>
   </nav>
 
   <div class="prods-header">
-    <span class="eyebrow">Abayas</span>
-    <h1>Everyday Abayas</h1>
+    <span class="eyebrow">{{ parent.name if parent else 'Shop' }}</span>
+    <h1>{{ subcategory.name }}</h1>
   </div>
 
   <div class="prods-toolbar">
-    <span>18 pieces</span>
-    <button class="sort">Sort: Newest
-      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
-    </button>
+    <span>{{ cards|length }} piece{% if cards|length != 1 %}s{% endif %}</span>
+    <form method="get">
+      <select class="sort" name="sort" onchange="this.form.submit()">
+        <option value="newest" {% if sort == 'newest' %}selected{% endif %}>Sort: Newest</option>
+        <option value="price-low" {% if sort == 'price-low' %}selected{% endif %}>Sort: Price low–high</option>
+        <option value="price-high" {% if sort == 'price-high' %}selected{% endif %}>Sort: Price high–low</option>
+      </select>
+    </form>
   </div>
 
   <div class="prods-layout">
     <aside class="filters">
       <div class="filter-group">
         <h4>Colour</h4>
-        <label><input type="checkbox"> Black</label>
-        <label><input type="checkbox"> Sand</label>
-        <label><input type="checkbox"> Ivory</label>
-        <label><input type="checkbox"> Stone</label>
+        <label><input type="checkbox" disabled> Black</label>
+        <label><input type="checkbox" disabled> Sand</label>
+        <label><input type="checkbox" disabled> Ivory</label>
+        <label><input type="checkbox" disabled> Stone</label>
       </div>
       <div class="filter-group">
         <h4>Size</h4>
@@ -42,43 +50,20 @@
       </div>
       <div class="filter-group">
         <h4>Price</h4>
-        <label><input type="checkbox"> Under BHD 30</label>
-        <label><input type="checkbox"> BHD 30 – 50</label>
-        <label><input type="checkbox"> BHD 50+</label>
+        <label><input type="checkbox" disabled> Under BHD 30</label>
+        <label><input type="checkbox" disabled> BHD 30 – 50</label>
+        <label><input type="checkbox" disabled> BHD 50+</label>
       </div>
     </aside>
 
     <div class="prod-grid">
-      <a href="/product/the-layla-abaya" class="prod-card">
-        <div class="prod-figure"><span class="prod-tag">Abaya</span><div class="ph tone-a"></div><div class="prod-quick">Quick View</div></div>
-        <div class="prod-name">The Layla Abaya</div>
-        <div class="prod-meta"><span>Black · Sand</span><span class="prod-price">BHD 42</span></div>
-      </a>
-      <a href="/product/mira-open-abaya" class="prod-card">
-        <div class="prod-figure"><span class="prod-tag">Abaya</span><div class="ph tone-b"></div><div class="prod-quick">Quick View</div></div>
-        <div class="prod-name">Mira Open Abaya</div>
-        <div class="prod-meta"><span>Black</span><span class="prod-price">BHD 47</span></div>
-      </a>
-      <a href="/product/sana-everyday-abaya" class="prod-card">
-        <div class="prod-figure"><span class="prod-tag">Abaya</span><div class="ph tone-c"></div><div class="prod-quick">Quick View</div></div>
-        <div class="prod-name">Sana Everyday Abaya</div>
-        <div class="prod-meta"><span>Stone</span><span class="prod-price">BHD 38</span></div>
-      </a>
-      <a href="/product/dana-wrap-abaya" class="prod-card">
-        <div class="prod-figure"><span class="prod-tag">Abaya</span><div class="ph tone-d"></div><div class="prod-quick">Quick View</div></div>
-        <div class="prod-name">Dana Wrap Abaya</div>
-        <div class="prod-meta"><span>Ivory</span><span class="prod-price">BHD 45</span></div>
-      </a>
-      <a href="/product/rania-everyday-abaya" class="prod-card">
-        <div class="prod-figure"><span class="prod-tag">Abaya</span><div class="ph tone-a"></div><div class="prod-quick">Quick View</div></div>
-        <div class="prod-name">Rania Everyday Abaya</div>
-        <div class="prod-meta"><span>Black</span><span class="prod-price">BHD 41</span></div>
-      </a>
-      <a href="/product/hessa-relaxed-abaya" class="prod-card">
-        <div class="prod-figure"><span class="prod-tag">Abaya</span><div class="ph tone-b"></div><div class="prod-quick">Quick View</div></div>
-        <div class="prod-name">Hessa Relaxed Abaya</div>
-        <div class="prod-meta"><span>Sand</span><span class="prod-price">BHD 39</span></div>
-      </a>
+      {% if cards %}
+      {% for card in cards %}
+      {% include "storefront/components/product_card.html" %}
+      {% endfor %}
+      {% else %}
+      <p class="prods-empty">No products yet in this collection</p>
+      {% endif %}
     </div>
   </div>
 </div>

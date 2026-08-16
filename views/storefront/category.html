@@ -24,7 +24,7 @@
 {% if subcategories %}
 <div class="sub-grid">
   {% for sub in subcategories %}
-  <a href="/products" class="sub-card">
+  <a href="/products/{{ sub.slug }}" class="sub-card">
     {% if sub.image_url %}
     <img class="ph" src="{{ sub.image_url }}" alt="">
     {% else %}

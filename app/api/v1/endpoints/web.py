@@ -1,14 +1,18 @@
+import json
 import os
+from decimal import Decimal
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import exists, func, select
-from sqlalchemy.orm import Session, aliased
+from sqlalchemy.orm import Session, aliased, selectinload
 
 from app.core.config import settings
 from app.core.database import get_db
 from app.models.category import Category
+from app.models.product import Product, ProductColor, ProductVariant
 
 router = APIRouter(tags=["web"])
 
@@ -45,6 +49,106 @@ def top_categories_with_child_counts(db: Session) -> list[Category]:
     return categories
 
 
+_TONES = ("a", "b", "c", "d")
+
+
+def _fmt_bhd(amount) -> str:
+    value = Decimal(str(amount)).quantize(Decimal("0.001"))
+    if value == value.to_integral():
+        return f"BHD {int(value)}"
+    text = f"{value:.3f}".rstrip("0").rstrip(".")
+    return f"BHD {text}"
+
+
+def _is_on_sale(variant: ProductVariant) -> bool:
+    return (
+        variant.compare_at_price is not None
+        and variant.compare_at_price < variant.price
+    )
+
+
+def _payable(variant: ProductVariant) -> Decimal:
+    if _is_on_sale(variant):
+        return Decimal(str(variant.compare_at_price))
+    return Decimal(str(variant.price))
+
+
+def _product_query(db: Session):
+    return db.query(Product).options(
+        selectinload(Product.images),
+        selectinload(Product.colors).selectinload(ProductColor.variants),
+        selectinload(Product.category).selectinload(Category.parent),
+    )
+
+
+def _active_products(db: Session) -> list[Product]:
+    return (
+        _product_query(db)
+        .filter(Product.is_active.is_(True))
+        .order_by(Product.created_at.desc(), Product.id.desc())
+        .all()
+    )
+
+
+def _product_card(product: Product, index: int = 0) -> dict:
+    variants = [variant for color in product.colors for variant in color.variants]
+    payables = [_payable(variant) for variant in variants]
+    regulars = [Decimal(str(variant.price)) for variant in variants]
+    on_sale = any(_is_on_sale(variant) for variant in variants)
+    if payables:
+        low, high = min(payables), max(payables)
+        price_label = (
+            f"From {_fmt_bhd(low)}" if low != high else _fmt_bhd(low)
+        )
+        was_label = _fmt_bhd(min(regulars)) if on_sale and regulars else ""
+    else:
+        price_label = "—"
+        was_label = ""
+    colors = [color.color_name for color in product.colors if color.color_name]
+    category = product.category
+    parent = category.parent if category else None
+    return {
+        "slug": product.slug,
+        "name": product.name,
+        "thumb": product.images[0].image_url if product.images else None,
+        "tag": parent.name if parent else (category.name if category else ""),
+        "subcategory": category.name if category else "",
+        "subcategory_slug": category.slug if category else "",
+        "color_summary": " · ".join(colors),
+        "price_label": price_label,
+        "was_label": was_label,
+        "on_sale": on_sale,
+        "tone": _TONES[index % 4],
+        "min_payable": min(payables) if payables else Decimal("0"),
+    }
+
+
+def _pdp_payload(product: Product) -> str:
+    colors = []
+    for color in product.colors:
+        variants = []
+        for variant in color.variants:
+            on_sale = _is_on_sale(variant)
+            variants.append(
+                {
+                    "id": variant.id,
+                    "size": variant.size,
+                    "stock": variant.stock_quantity,
+                    "current_label": _fmt_bhd(_payable(variant)),
+                    "was_label": _fmt_bhd(variant.price) if on_sale else None,
+                }
+            )
+        colors.append(
+            {
+                "id": color.id,
+                "name": color.color_name,
+                "hex": color.color_hex or "#2b2b2f",
+                "variants": variants,
+            }
+        )
+    return json.dumps({"colors": colors})
+
+
 def storefront_context(request: Request, *, nav_variant: str = "solid", **extra):
     extra.setdefault("footer_categories", extra.get("top_categories") or [])
     extra.setdefault("top_categories", [])
@@ -76,6 +180,8 @@ def _storefront_page(
 @router.get("/", response_class=HTMLResponse, include_in_schema=False)
 def storefront_home(request: Request, db: Session = Depends(get_db)):
     top_categories = top_categories_with_child_counts(db)
+    products = _active_products(db)
+    cards = [_product_card(product, i) for i, product in enumerate(products)]
     return _storefront_page(
         request,
         "storefront/index.html",
@@ -83,6 +189,8 @@ def storefront_home(request: Request, db: Session = Depends(get_db)):
         nav_variant="hero",
         top_categories=top_categories,
         footer_categories=top_categories,
+        seasonal_edit=cards[:3],
+        new_arrivals=cards[:8],
     )
 
 
@@ -128,13 +236,72 @@ def storefront_category_detail(request: Request, slug: str, db: Session = Depend
 
 
 @router.get("/products", response_class=HTMLResponse, include_in_schema=False)
-def storefront_products(request: Request, db: Session = Depends(get_db)):
-    return _storefront_page(request, "storefront/products.html", db=db)
+def storefront_products_index():
+    return RedirectResponse(url="/categories", status_code=303)
+
+
+@router.get("/products/{subcategory_slug}", response_class=HTMLResponse, include_in_schema=False)
+def storefront_products(request: Request, subcategory_slug: str, db: Session = Depends(get_db)):
+    subcategory = (
+        db.query(Category)
+        .options(selectinload(Category.parent))
+        .filter(Category.slug == subcategory_slug, Category.parent_id.isnot(None))
+        .first()
+    )
+    if subcategory is None:
+        raise HTTPException(status_code=404, detail="Not Found")
+
+    products = (
+        _product_query(db)
+        .filter(Product.is_active.is_(True), Product.category_id == subcategory.id)
+        .order_by(Product.created_at.desc(), Product.id.desc())
+        .all()
+    )
+    cards = [_product_card(product, i) for i, product in enumerate(products)]
+    sort = request.query_params.get("sort") or "newest"
+    if sort == "price-low":
+        cards.sort(key=lambda card: card["min_payable"])
+    elif sort == "price-high":
+        cards.sort(key=lambda card: card["min_payable"], reverse=True)
+    else:
+        sort = "newest"
+
+    return _storefront_page(
+        request,
+        "storefront/products.html",
+        db=db,
+        subcategory=subcategory,
+        parent=subcategory.parent,
+        cards=cards,
+        sort=sort,
+    )
 
 
 @router.get("/product/{slug}", response_class=HTMLResponse, include_in_schema=False)
 def storefront_product(request: Request, slug: str, db: Session = Depends(get_db)):
-    return _storefront_page(request, "storefront/product.html", db=db, slug=slug)
+    product = (
+        _product_query(db)
+        .filter(Product.slug == slug, Product.is_active.is_(True))
+        .first()
+    )
+    if product is None:
+        raise HTTPException(status_code=404, detail="Not Found")
+    category = product.category
+    parent = category.parent if category else None
+    ask_url = (
+        f"https://wa.me/{settings.WHATSAPP_NUMBER}"
+        f"?text={quote(f'Hi, I am interested in {product.name}')}"
+    )
+    return _storefront_page(
+        request,
+        "storefront/product.html",
+        db=db,
+        product=product,
+        parent=parent,
+        catalog_json=_pdp_payload(product),
+        whatsapp_url=ask_url,
+        available=any(color.variants for color in product.colors),
+    )
 
 
 @router.get("/cart", response_class=HTMLResponse, include_in_schema=False)

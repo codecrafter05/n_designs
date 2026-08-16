@@ -14,6 +14,7 @@
   <div class="hero-scroll"><span class="line"></span> Scroll</div>
 </section>
 
+{% if seasonal_edit %}
 <section class="section" id="edit">
   <div class="wrap">
     <div class="section-head">
@@ -21,26 +22,28 @@
         <span class="eyebrow">The Season</span>
         <h2 class="section-title">Autumn Edit</h2>
       </div>
-      <a href="/products" class="text-link">View the collection →</a>
+      <a href="{% if seasonal_edit[0].subcategory_slug %}/products/{{ seasonal_edit[0].subcategory_slug }}{% else %}/categories{% endif %}" class="text-link">View the collection →</a>
     </div>
   </div>
   <div class="wrap">
     <div class="edit-grid">
-      <a href="/product/the-layla-abaya" class="edit-card tall">
-        <div class="ph tone-a"></div>
-        <div class="edit-card-label"><div class="k">Volume 04</div><div class="t">The Layla Abaya</div></div>
+      {% for card in seasonal_edit %}
+      <a href="/product/{{ card.slug }}" class="edit-card{% if loop.first %} tall{% endif %}">
+        {% if card.thumb %}
+        <img class="ph" src="{{ card.thumb }}" alt="">
+        {% else %}
+        <div class="ph tone-{{ card.tone }}"></div>
+        {% endif %}
+        <div class="edit-card-label">
+          <div class="k">{{ card.subcategory or card.tag }}</div>
+          <div class="t">{{ card.name }}</div>
+        </div>
       </a>
-      <a href="/product/noor-occasion-dress" class="edit-card">
-        <div class="ph tone-b"></div>
-        <div class="edit-card-label"><div class="k">Evening</div><div class="t">Occasion Dresses</div></div>
-      </a>
-      <a href="/product/rima-linen-jalabiya" class="edit-card">
-        <div class="ph tone-c"></div>
-        <div class="edit-card-label"><div class="k">Everyday</div><div class="t">Linen Jalabiyas</div></div>
-      </a>
+      {% endfor %}
     </div>
   </div>
 </section>
+{% endif %}
 
 {% if top_categories %}
 <section class="section" style="padding-top:0;">
@@ -74,6 +77,7 @@
 </section>
 {% endif %}
 
+{% if new_arrivals %}
 <section class="section" id="new-arrivals">
   <div class="wrap">
     <div class="section-head">
@@ -85,45 +89,13 @@
     </div>
 
     <div class="prod-grid">
-      <a href="/product/the-layla-abaya" class="prod-card">
-        <div class="prod-figure">
-          <span class="prod-tag">Abaya</span>
-          <div class="ph tone-a"></div>
-          <div class="prod-quick">Quick View</div>
-        </div>
-        <div class="prod-name">The Layla Abaya</div>
-        <div class="prod-meta"><span>Black · Sand</span><span class="prod-price">BHD 42</span></div>
-      </a>
-      <a href="/product/noor-occasion-dress" class="prod-card">
-        <div class="prod-figure">
-          <span class="prod-tag">Dress</span>
-          <div class="ph tone-c"></div>
-          <div class="prod-quick">Quick View</div>
-        </div>
-        <div class="prod-name">Noor Occasion Dress</div>
-        <div class="prod-meta"><span>Ivory</span><span class="prod-price">BHD 68</span></div>
-      </a>
-      <a href="/product/rima-linen-jalabiya" class="prod-card">
-        <div class="prod-figure">
-          <span class="prod-tag">Jalabiya</span>
-          <div class="ph tone-d"></div>
-          <div class="prod-quick">Quick View</div>
-        </div>
-        <div class="prod-name">Rima Linen Jalabiya</div>
-        <div class="prod-meta"><span>Stone</span><span class="prod-price">BHD 29</span></div>
-      </a>
-      <a href="/product/mira-open-abaya" class="prod-card">
-        <div class="prod-figure">
-          <span class="prod-tag">Abaya</span>
-          <div class="ph tone-b"></div>
-          <div class="prod-quick">Quick View</div>
-        </div>
-        <div class="prod-name">Mira Open Abaya</div>
-        <div class="prod-meta"><span>Black</span><span class="prod-price">BHD 47</span></div>
-      </a>
+      {% for card in new_arrivals %}
+      {% include "storefront/components/product_card.html" %}
+      {% endfor %}
     </div>
   </div>
 </section>
+{% endif %}
 
 <section class="band">
   <div class="wrap band-inner">

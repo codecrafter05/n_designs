@@ -1,6 +1,4 @@
 import os
-import re
-import unicodedata
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, UploadFile, File
@@ -13,6 +11,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.api.v1.endpoints.auth import _get_current_user
 from app.core.database import get_db
+from app.core.slugs import unique_slug
 from app.core.uploads import delete_category_image, save_category_image
 from app.models.category import Category
 from app.models.product import Product
@@ -35,26 +34,6 @@ def _redirect(path: str, **params: str) -> RedirectResponse:
     qs = urlencode({k: v for k, v in params.items() if v})
     url = f"{path}?{qs}" if qs else path
     return RedirectResponse(url=url, status_code=303)
-
-
-def _slugify(name: str) -> str:
-    text = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode("ascii")
-    text = re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
-    return text or "category"
-
-
-def _unique_slug(db: Session, name: str, exclude_id: int | None = None) -> str:
-    base = _slugify(name)
-    slug = base
-    n = 2
-    while True:
-        q = db.query(Category).filter(Category.slug == slug)
-        if exclude_id is not None:
-            q = q.filter(Category.id != exclude_id)
-        if q.first() is None:
-            return slug
-        slug = f"{base}-{n}"
-        n += 1
 
 
 def _next_display_order(db: Session, parent_id: int | None) -> int:
@@ -151,7 +130,7 @@ async def categories_create(
 
     category = Category(
         name=name,
-        slug=_unique_slug(db, name),
+        slug=unique_slug(db, Category, name),
         parent_id=resolved_parent,
         image_url=image_url,
         display_order=_next_display_order(db, resolved_parent),
@@ -271,7 +250,7 @@ async def categories_update(
         category.display_order = _next_display_order(db, resolved_parent)
 
     category.name = name
-    category.slug = _unique_slug(db, name, exclude_id=category.id)
+    category.slug = unique_slug(db, Category, name, exclude_id=category.id)
     category.parent_id = resolved_parent
     db.commit()
     return _redirect("/admin/categories", notice="Category updated.")

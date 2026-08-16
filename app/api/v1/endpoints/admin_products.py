@@ -1,7 +1,6 @@
 import json
 import os
 import re
-import unicodedata
 from decimal import Decimal, InvalidOperation
 from urllib.parse import urlencode
 
@@ -12,6 +11,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.database import get_db
+from app.core.slugs import unique_slug
 from app.core.uploads import delete_image, save_image
 from app.models.category import Category
 from app.models.product import Product, ProductColor, ProductImage, ProductVariant
@@ -28,26 +28,6 @@ def _redirect(path: str, **params: str) -> RedirectResponse:
     qs = urlencode({k: v for k, v in params.items() if v})
     url = f"{path}?{qs}" if qs else path
     return RedirectResponse(url=url, status_code=303)
-
-
-def _slugify(name: str) -> str:
-    text = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode("ascii")
-    text = re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
-    return text or "product"
-
-
-def _unique_slug(db: Session, name: str, exclude_id: int | None = None) -> str:
-    base = _slugify(name)
-    slug = base
-    n = 2
-    while True:
-        q = db.query(Product).filter(Product.slug == slug)
-        if exclude_id is not None:
-            q = q.filter(Product.id != exclude_id)
-        if q.first() is None:
-            return slug
-        slug = f"{base}-{n}"
-        n += 1
 
 
 def _subcategory_groups(db: Session) -> list[tuple[Category, list[Category]]]:
@@ -530,7 +510,7 @@ async def _save_product(
         if is_create:
             product = Product(
                 name=name,
-                slug=_unique_slug(db, name),
+                slug=unique_slug(db, Product, name),
                 description=(description or "").strip() or None,
                 category_id=resolved_category.id,
                 base_price=Decimal("0.000"),
@@ -540,7 +520,7 @@ async def _save_product(
             db.flush()
         else:
             product.name = name
-            product.slug = _unique_slug(db, name, exclude_id=product.id)
+            product.slug = unique_slug(db, Product, name, exclude_id=product.id)
             product.description = (description or "").strip() or None
             product.category_id = resolved_category.id
             product.is_active = is_active == "1"
