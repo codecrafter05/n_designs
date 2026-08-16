@@ -81,6 +81,47 @@ def homepage_featured_subcategories(db: Session) -> list[Category]:
     return categories
 
 
+def all_subcategories_with_counts(db: Session) -> list[Category]:
+    """Every subcategory, with active product counts. Ordered by parent then display_order."""
+    parent = aliased(Category)
+    product_count = (
+        select(func.count(Product.id))
+        .where(Product.category_id == Category.id, Product.is_active.is_(True))
+        .scalar_subquery()
+        .label("product_count")
+    )
+    rows = (
+        db.query(Category, product_count)
+        .join(parent, Category.parent_id == parent.id)
+        .options(selectinload(Category.parent))
+        .filter(Category.parent_id.isnot(None))
+        .order_by(parent.display_order, parent.id, Category.display_order, Category.id)
+        .all()
+    )
+    categories = []
+    for category, count in rows:
+        category.product_count = count
+        categories.append(category)
+    return categories
+
+
+def collections_grouped(db: Session) -> list[tuple[Category, list[Category]]]:
+    """Subcategories grouped under their parent, parent order then display_order."""
+    groups: list[tuple[Category, list[Category]]] = []
+    index: dict[int, list[Category]] = {}
+    for subcategory in all_subcategories_with_counts(db):
+        parent = subcategory.parent
+        if parent is None:
+            continue
+        children = index.get(parent.id)
+        if children is None:
+            children = []
+            index[parent.id] = children
+            groups.append((parent, children))
+        children.append(subcategory)
+    return groups
+
+
 _TONES = ("a", "b", "c", "d")
 NEW_ARRIVALS_LIMIT = 8
 
@@ -240,6 +281,16 @@ def storefront_home(request: Request, db: Session = Depends(get_db)):
 @router.get("/about", response_class=HTMLResponse, include_in_schema=False)
 def storefront_about(request: Request, db: Session = Depends(get_db)):
     return _storefront_page(request, "storefront/about.html", db=db)
+
+
+@router.get("/collections", response_class=HTMLResponse, include_in_schema=False)
+def storefront_collections(request: Request, db: Session = Depends(get_db)):
+    return _storefront_page(
+        request,
+        "storefront/collections.html",
+        db=db,
+        collection_groups=collections_grouped(db),
+    )
 
 
 @router.get("/categories", response_class=HTMLResponse, include_in_schema=False)

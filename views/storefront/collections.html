@@ -1,0 +1,56 @@
+{% extends "storefront/base.html" %}
+{% set nav_variant = "solid" %}
+{% set tones = ['a', 'b', 'c', 'd'] %}
+
+{% block title %}Collections — N Designs{% endblock %}
+
+{% block page_css %}<link rel="stylesheet" href="/static/css/pages/category.css">{% endblock %}
+
+{% block content %}
+<div class="wrap">
+  <nav class="breadcrumb" style="padding-top:0;">
+    <a href="/">Home</a><span class="sep">/</span>
+    <span>Collections</span>
+  </nav>
+  <div class="cat-header">
+    <span class="eyebrow">Discover</span>
+    <h1>Collections</h1>
+    <p>Every collection, in one place.</p>
+  </div>
+</div>
+
+{% if collection_groups %}
+{% for parent, children in collection_groups %}
+<section class="collection-group">
+  <div class="wrap">
+    <div class="collection-group-head">
+      <div>
+        <span class="eyebrow">Category</span>
+        <h2 class="section-title">{{ parent.name }}</h2>
+      </div>
+      <a href="/categories/{{ parent.slug }}" class="text-link">Shop {{ parent.name }} →</a>
+    </div>
+  </div>
+  <div class="sub-grid">
+    {% for category in children %}
+    <a href="/products/{{ category.slug }}" class="sub-card">
+      {% if category.image_url %}
+      <img class="ph" src="{{ category.image_url }}" alt="">
+      {% else %}
+      <div class="ph tone-{{ tones[loop.index0 % 4] }}"></div>
+      {% endif %}
+      <div class="sub-card-inner">
+        <div class="t">{{ category.name }}</div>
+        <div class="n">{{ category.product_count }} piece{% if category.product_count != 1 %}s{% endif %}</div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+{% endfor %}
+{% else %}
+<div class="wrap cat-empty">
+  <p>No collections yet.</p>
+</div>
+{% endif %}
+{% endblock %}

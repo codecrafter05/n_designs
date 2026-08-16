@@ -1,6 +1,5 @@
 <a href="/product/{{ card.slug }}" class="prod-card">
   <div class="prod-figure">
-    {% if card.tag %}<span class="prod-tag">{{ card.tag }}</span>{% endif %}
     {% if card.on_sale %}<span class="prod-sale">Sale</span>{% endif %}
     {% if card.thumb %}
     <img class="ph" src="{{ card.thumb }}" alt="">
