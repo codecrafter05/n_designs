@@ -18,6 +18,10 @@ Approved references: Categories list/form (`views/admin/category/`), Maxton `for
 
 `ProductVariant.price` is the regular price. `ProductVariant.compare_at_price` is the optional discounted selling price (UI label: **Discount**; column name unchanged). A variant is on sale when `compare_at_price IS NOT NULL AND compare_at_price < price`. When on sale, `compare_at_price` is what the customer pays and `price` is shown struck through. When the discount field is empty, `price` is the payable price.
 
+## Checkout (COD MVP)
+
+Checkout is `POST /checkout` in one DB transaction: find-or-create Customer by email, create Order + OrderItems, decrement `ProductVariant.stock_quantity`, then delete `CartItem` rows (the `Cart` row and `cart_session` cookie stay). Shipping is a flat **BHD 3.000** placeholder until real rates exist. Card and BenefitPay radios stay in the markup, disabled, for a later Gate-E/MPGS slot-in. `GET /order-confirmation/{order_id}` has no access control — anyone with the URL can view the order. Revisit once customer accounts exist.
+
 ## URL conventions
 
 Admin section pages live directly under `/admin/{section}`, not `/admin/dashboard/{section}`. Only the dashboard home page itself is `/admin/dashboard`.

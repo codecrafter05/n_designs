@@ -2,6 +2,10 @@
 
 This file holds future feature ideas that are **not yet decided in detail** and **not yet started**. It is separate from `PROJECT_CONVENTIONS.md`, which records binding standing rules already in effect.
 
+## Known Limitations
+
+- Order confirmation page (`/order-confirmation/{id}`) has no access control — anyone with the URL can view it. Revisit once customer accounts/login exist.
+
 ## Deferred Features
 
 ### Loyalty Points

@@ -1,0 +1,126 @@
+{% extends "admin/base.html" %}
+
+{% block title %}N Designs — {{ number }}{% endblock %}
+
+{% block content %}
+  <div class="page-breadcrumb d-none d-sm-flex align-items-center mb-3">
+    <div class="breadcrumb-title pe-3">N Designs</div>
+    <div class="ps-3">
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-0 p-0">
+          <li class="breadcrumb-item"><a href="/admin/dashboard"><i class="material-icons-outlined">home</i></a></li>
+          <li class="breadcrumb-item"><a href="/admin/orders">Orders</a></li>
+          <li class="breadcrumb-item active" aria-current="page">{{ number }}</li>
+        </ol>
+      </nav>
+    </div>
+  </div>
+
+  <div class="card rounded-4 mb-3">
+    <div class="card-body p-4">
+      <div class="d-flex flex-wrap align-items-center gap-3">
+        <h4 class="fw-bold mb-0">{{ number }}</h4>
+        <span class="{{ chip.badge_class }} d-inline-block px-2 py-1 mb-0">{{ chip.label }}</span>
+        <span class="text-secondary">Placed {{ placed_label }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-12 col-lg-8">
+      <div class="card rounded-4 mb-3">
+        <div class="card-body p-4">
+          <h5 class="fw-bold mb-3">Items</h5>
+          <div class="table-responsive">
+            <table class="table align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th scope="col">Product</th>
+                  <th scope="col">Color</th>
+                  <th scope="col">Size</th>
+                  <th scope="col">Qty</th>
+                  <th scope="col">Unit</th>
+                  <th scope="col">Subtotal</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for line in items %}
+                <tr>
+                  <td>
+                    <div class="d-flex align-items-center gap-3">
+                      {% if line.thumb %}
+                      <img src="{{ line.thumb }}" alt="" class="cat-thumb">
+                      {% else %}
+                      <div class="cat-thumb placeholder"><span class="material-icons-outlined">image</span></div>
+                      {% endif %}
+                      <p class="cat-name">{{ line.name }}</p>
+                    </div>
+                  </td>
+                  <td>{{ line.color }}</td>
+                  <td>{{ line.size }}</td>
+                  <td>{{ line.quantity }}</td>
+                  <td>{{ line.unit_label }}</td>
+                  <td>{{ line.line_label }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="card rounded-4 mb-3">
+        <div class="card-body p-4">
+          <h5 class="fw-bold mb-3">Totals</h5>
+          <div class="d-flex justify-content-between mb-2">
+            <span>Items subtotal</span>
+            <span>{{ items_subtotal_label }}</span>
+          </div>
+          <div class="d-flex justify-content-between mb-2">
+            <span>Shipping <span class="text-secondary">(flat placeholder)</span></span>
+            <span>{{ shipping_label }}</span>
+          </div>
+          <div class="d-flex justify-content-between border-top pt-3 fw-bold">
+            <span>Total</span>
+            <span>{{ stored_total_label }}</span>
+          </div>
+          {% if total_mismatch %}
+          <div class="alert-admin-error d-inline-block px-2 py-1 mt-3 mb-0">
+            Stored total does not match items + shipping ({{ computed_total_label }}). Showing the recorded order total.
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-lg-4">
+      <div class="card rounded-4 mb-3">
+        <div class="card-body p-4">
+          <h5 class="fw-bold mb-3">Customer &amp; shipping</h5>
+          <p class="mb-1 fw-semibold">{{ customer.name if customer else '—' }}</p>
+          <p class="mb-1 text-secondary">{{ customer.email if customer and customer.email else '—' }}</p>
+          <p class="mb-3 text-secondary">{{ customer.phone if customer and customer.phone else '—' }}</p>
+          <label class="form-label">Shipping address</label>
+          <p class="mb-3">{{ order.shipping_address }}</p>
+          <label class="form-label">Payment</label>
+          <p class="mb-0">{{ order.payment_method }}</p>
+        </div>
+      </div>
+
+      <div class="card rounded-4 mb-3">
+        <div class="card-body p-4">
+          <h5 class="fw-bold mb-3">Order status</h5>
+          <form method="post" action="/admin/orders/{{ order.id }}/status">
+            <label class="form-label" for="status">Status</label>
+            <select class="form-select mb-3" id="status" name="status">
+              {% for value, label in statuses %}
+              <option value="{{ value }}" {% if order.status == value %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-admin-primary">Save</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

@@ -3,16 +3,20 @@ import os
 from decimal import Decimal
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import exists, func, select
 from sqlalchemy.orm import Session, aliased, selectinload
 
-from app.core.cart import get_or_create_cart, set_cart_cookie
+from app.core.cart import get_or_create_cart, reload_cart, set_cart_cookie
 from app.core.config import settings
 from app.core.database import get_db
+from app.core.orders import SHIPPING_BHD, order_number
+from app.models.cart import Cart
 from app.models.category import Category
+from app.models.customer import Customer
+from app.models.order import Order, OrderItem
 from app.models.product import Product, ProductColor, ProductVariant
 
 router = APIRouter(tags=["web"])
@@ -126,6 +130,13 @@ def collections_grouped(db: Session) -> list[tuple[Category, list[Category]]]:
 _TONES = ("a", "b", "c", "d")
 NEW_ARRIVALS_LIMIT = 8
 HOMEPAGE_SALE_LIMIT = 4
+COUNTRIES = (
+    "Bahrain",
+    "Saudi Arabia",
+    "United Arab Emirates",
+    "Kuwait",
+    "Other",
+)
 
 
 def _fmt_bhd(amount) -> str:
@@ -281,7 +292,7 @@ def _cart_count(cart) -> int:
     return sum(item.quantity for item in cart.items)
 
 
-def _cart_lines(cart) -> tuple[list[dict], str]:
+def _cart_lines(cart) -> tuple[list[dict], Decimal]:
     lines = []
     subtotal = Decimal("0")
     for item in cart.items:
@@ -309,7 +320,7 @@ def _cart_lines(cart) -> tuple[list[dict], str]:
                 "on_sale": on_sale,
             }
         )
-    return lines, _fmt_bhd(subtotal) if lines else _fmt_bhd(0)
+    return lines, subtotal
 
 
 def _storefront_page(
@@ -501,19 +512,292 @@ def storefront_product(request: Request, slug: str, db: Session = Depends(get_db
 @router.get("/cart", response_class=HTMLResponse, include_in_schema=False)
 def storefront_cart(request: Request, db: Session = Depends(get_db)):
     cart, _, _ = get_or_create_cart(db, request)
-    lines, subtotal_label = _cart_lines(cart)
+    lines, subtotal = _cart_lines(cart)
     return _storefront_page(
         request,
         "storefront/cart.html",
         db=db,
         cart_lines=lines,
-        cart_subtotal_label=subtotal_label,
+        cart_subtotal_label=_fmt_bhd(subtotal) if lines else _fmt_bhd(0),
     )
+
+
+def _checkout_form(data: dict | None = None) -> dict:
+    data = data or {}
+    return {
+        "email": (data.get("email") or "").strip(),
+        "first_name": (data.get("first_name") or "").strip(),
+        "last_name": (data.get("last_name") or "").strip(),
+        "address": (data.get("address") or "").strip(),
+        "city": (data.get("city") or "").strip(),
+        "country": (data.get("country") or "Bahrain").strip(),
+        "phone": (data.get("phone") or "").strip(),
+    }
+
+
+def _checkout_page(
+    request: Request,
+    db: Session,
+    *,
+    form: dict | None = None,
+    error: str | None = None,
+):
+    cart, _, _ = get_or_create_cart(db, request)
+    lines, subtotal = _cart_lines(cart)
+    if not lines:
+        return RedirectResponse(url="/cart", status_code=303)
+    shipping = SHIPPING_BHD
+    total = subtotal + shipping
+    return _storefront_page(
+        request,
+        "storefront/checkout.html",
+        db=db,
+        cart_lines=lines,
+        cart_subtotal_label=_fmt_bhd(subtotal),
+        shipping_label=_fmt_bhd(shipping),
+        checkout_total_label=_fmt_bhd(total),
+        countries=COUNTRIES,
+        form=_checkout_form(form),
+        checkout_error=error,
+    )
+
+
+def _cart_problems(cart) -> list[str]:
+    problems = []
+    for item in cart.items:
+        variant = item.variant
+        product = variant.color.product if variant and variant.color else None
+        name = product.name if product else "An item"
+        detail = ""
+        if variant and variant.color:
+            detail = f" ({variant.color.color_name} · {variant.size})"
+        if product is None or not product.is_active:
+            problems.append(f"{name}{detail} is no longer available.")
+            continue
+        if variant.stock_quantity < item.quantity:
+            problems.append(
+                f"{name}{detail} only has {variant.stock_quantity} left — "
+                f"you have {item.quantity} in your bag."
+            )
+    return problems
 
 
 @router.get("/checkout", response_class=HTMLResponse, include_in_schema=False)
 def storefront_checkout(request: Request, db: Session = Depends(get_db)):
-    return _storefront_page(request, "storefront/checkout.html", db=db)
+    return _checkout_page(request, db)
+
+
+@router.post("/checkout", include_in_schema=False)
+def storefront_checkout_submit(
+    request: Request,
+    db: Session = Depends(get_db),
+    email: str = Form(""),
+    first_name: str = Form(""),
+    last_name: str = Form(""),
+    address: str = Form(""),
+    city: str = Form(""),
+    country: str = Form(""),
+    phone: str = Form(""),
+    payment_method: str = Form("cod"),
+):
+    form = _checkout_form(
+        {
+            "email": email,
+            "first_name": first_name,
+            "last_name": last_name,
+            "address": address,
+            "city": city,
+            "country": country,
+            "phone": phone,
+        }
+    )
+    missing = [
+        label
+        for key, label in (
+            ("email", "Email"),
+            ("first_name", "First name"),
+            ("last_name", "Last name"),
+            ("address", "Address"),
+            ("city", "City"),
+            ("country", "Country"),
+            ("phone", "Phone"),
+        )
+        if not form[key]
+    ]
+    if missing:
+        return _checkout_page(
+            request,
+            db,
+            form=form,
+            error="Please fill in: " + ", ".join(missing) + ".",
+        )
+    if "@" not in form["email"]:
+        return _checkout_page(request, db, form=form, error="Please enter a valid email.")
+    if payment_method != "cod":
+        return _checkout_page(
+            request,
+            db,
+            form=form,
+            error="Cash on Delivery is the only payment method available right now.",
+        )
+
+    cart, _, _ = get_or_create_cart(db, request)
+    lines, subtotal = _cart_lines(cart)
+    if not lines:
+        return RedirectResponse(url="/cart", status_code=303)
+
+    try:
+        locked = (
+            db.query(Cart)
+            .filter(Cart.id == cart.id)
+            .with_for_update()
+            .first()
+        )
+        if locked is None:
+            return RedirectResponse(url="/cart", status_code=303)
+        cart = reload_cart(db, locked.id)
+        variant_ids = sorted(
+            {
+                item.product_variant_id
+                for item in cart.items
+                if item.product_variant_id
+            }
+        )
+        for variant_id in variant_ids:
+            db.query(ProductVariant).filter(
+                ProductVariant.id == variant_id
+            ).with_for_update().first()
+        cart = reload_cart(db, cart.id)
+        if not cart.items:
+            db.rollback()
+            return RedirectResponse(url="/cart", status_code=303)
+        problems = _cart_problems(cart)
+        if problems:
+            db.rollback()
+            return _checkout_page(
+                request,
+                db,
+                form=form,
+                error=" ".join(problems) + " Update your bag and try again.",
+            )
+
+        lines, subtotal = _cart_lines(cart)
+        shipping = SHIPPING_BHD
+        total = subtotal + shipping
+        email_key = form["email"].lower()
+        customer = (
+            db.query(Customer).filter(func.lower(Customer.email) == email_key).first()
+        )
+        full_name = f"{form['first_name']} {form['last_name']}".strip()
+        if customer:
+            customer.name = full_name
+            customer.email = email_key
+            customer.phone = form["phone"]
+            customer.address = form["address"]
+            customer.city = form["city"]
+            customer.country = form["country"]
+        else:
+            customer = Customer(
+                name=full_name,
+                email=email_key,
+                phone=form["phone"],
+                address=form["address"],
+                city=form["city"],
+                country=form["country"],
+            )
+            db.add(customer)
+            db.flush()
+
+        shipping_address = (
+            f"{form['address']}, {form['city']}, {form['country']}"
+        )
+        order = Order(
+            customer_id=customer.id,
+            status="pending",
+            total=total,
+            shipping_address=shipping_address,
+            payment_method="Cash on Delivery",
+        )
+        db.add(order)
+        db.flush()
+
+        for item in cart.items:
+            variant = item.variant
+            payable = _payable(variant)
+            db.add(
+                OrderItem(
+                    order_id=order.id,
+                    product_variant_id=variant.id,
+                    quantity=item.quantity,
+                    price_at_purchase=payable,
+                )
+            )
+            variant.stock_quantity = variant.stock_quantity - item.quantity
+
+        for item in list(cart.items):
+            db.delete(item)
+        db.commit()
+    except Exception:
+        db.rollback()
+        return _checkout_page(
+            request,
+            db,
+            form=form,
+            error="Something went wrong, please try again.",
+        )
+
+    return RedirectResponse(url=f"/order-confirmation/{order.id}", status_code=303)
+
+
+@router.get(
+    "/order-confirmation/{order_id}",
+    response_class=HTMLResponse,
+    include_in_schema=False,
+)
+def storefront_order_confirmation(
+    order_id: int, request: Request, db: Session = Depends(get_db)
+):
+    order = (
+        db.query(Order)
+        .options(
+            selectinload(Order.customer),
+            selectinload(Order.items)
+            .selectinload(OrderItem.variant)
+            .selectinload(ProductVariant.color)
+            .selectinload(ProductColor.product)
+            .selectinload(Product.images),
+        )
+        .filter(Order.id == order_id)
+        .first()
+    )
+    if order is None:
+        raise HTTPException(status_code=404, detail="Not Found")
+    items = []
+    for item in order.items:
+        variant = item.variant
+        color = variant.color if variant else None
+        product = color.product if color else None
+        items.append(
+            {
+                "name": product.name if product else "Item",
+                "color": color.color_name if color else "",
+                "size": variant.size if variant else "",
+                "quantity": item.quantity,
+                "line_label": _fmt_bhd(
+                    Decimal(str(item.price_at_purchase)) * item.quantity
+                ),
+                "thumb": product.images[0].image_url if product and product.images else None,
+            }
+        )
+    return _storefront_page(
+        request,
+        "storefront/order-confirmation.html",
+        db=db,
+        order=order,
+        order_number=order_number(order.id),
+        order_items=items,
+        order_total_label=_fmt_bhd(order.total),
+    )
 
 
 @router.get("/terms", response_class=HTMLResponse, include_in_schema=False)
@@ -536,11 +820,6 @@ def _section_page(request: Request, template: str, page_title: str):
         template,
         {"request": request, "page_title": page_title},
     )
-
-
-@router.get("/admin/orders", response_class=HTMLResponse, include_in_schema=False)
-def orders_page(request: Request):
-    return _section_page(request, "admin/orders/index.html", "Orders")
 
 
 @router.get("/admin/customers", response_class=HTMLResponse, include_in_schema=False)

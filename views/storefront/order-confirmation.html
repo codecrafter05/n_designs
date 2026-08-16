@@ -1,0 +1,54 @@
+{% extends "storefront/base.html" %}
+{% set nav_variant = "solid" %}
+
+{% block title %}Order {{ order_number }} — N Designs{% endblock %}
+
+{% block page_css %}<link rel="stylesheet" href="/static/css/pages/checkout.css">{% endblock %}
+
+{% block content %}
+<div class="wrap">
+  <div class="co-steps">
+    <span>Bag</span><span class="sep">—</span>
+    <span>Checkout</span><span class="sep">—</span>
+    <span class="active">Confirmation</span>
+  </div>
+
+  <div class="confirm-header">
+    <span class="eyebrow">Thank you</span>
+    <h1>Order confirmed</h1>
+    <p class="confirm-lead">
+      Your order <strong>{{ order_number }}</strong> is in. We'll contact you by phone or WhatsApp
+      to confirm delivery. Please have cash ready for the courier.
+    </p>
+  </div>
+
+  <div class="confirm-layout">
+    <div>
+      <h3 class="confirm-title">Items</h3>
+      {% for line in order_items %}
+      <div class="mini-item">
+        {% if line.thumb %}
+        <img class="ph" src="{{ line.thumb }}" alt="">
+        {% else %}
+        <div class="ph tone-a"></div>
+        {% endif %}
+        <div>
+          <div class="n">{{ line.name }}</div>
+          <div class="m">{{ line.color }} · {{ line.size }} · Qty {{ line.quantity }}</div>
+        </div>
+        <div class="p">{{ line.line_label }}</div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <aside class="summary">
+      <h3>Details</h3>
+      <div class="summary-row"><span>Order</span><span>{{ order_number }}</span></div>
+      <div class="summary-row"><span>Payment</span><span>{{ order.payment_method }}</span></div>
+      <div class="summary-row"><span>Ship to</span><span class="confirm-addr">{{ order.shipping_address }}</span></div>
+      <div class="summary-row total"><span>Total</span><span>{{ order_total_label }}</span></div>
+      <a href="/categories" class="btn btn-primary btn-block" style="margin-top:22px;">Continue Shopping</a>
+    </aside>
+  </div>
+</div>
+{% endblock %}

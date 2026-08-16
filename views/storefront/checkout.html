@@ -7,75 +7,106 @@
 
 {% block content %}
 <div class="wrap">
-  <div class="co-steps">
-    <span>Bag</span><span class="sep">—</span>
-    <span class="active">Checkout</span><span class="sep">—</span>
-    <span>Confirmation</span>
+  <div class="co-header">
+    <h1>Checkout</h1>
   </div>
-  <a href="/cart" class="text-link" style="display:inline-flex;margin-top:4px;">← Back to Bag</a>
 
-  <form class="co-layout" onsubmit="return false;">
+  <form class="co-layout" method="post" action="/checkout" id="checkoutForm">
     <div>
       <fieldset>
         <legend>Contact</legend>
         <div class="field-row">
-          <div class="field full"><label for="email">Email</label><input id="email" type="email" required></div>
+          <div class="field full">
+            <label for="email">Email</label>
+            <input id="email" name="email" type="email" required value="{{ form.email }}">
+          </div>
         </div>
       </fieldset>
 
       <fieldset>
         <legend>Shipping Address</legend>
         <div class="field-row">
-          <div class="field"><label for="fn">First name</label><input id="fn" type="text" required></div>
-          <div class="field"><label for="ln">Last name</label><input id="ln" type="text" required></div>
+          <div class="field">
+            <label for="fn">First name</label>
+            <input id="fn" name="first_name" type="text" required value="{{ form.first_name }}">
+          </div>
+          <div class="field">
+            <label for="ln">Last name</label>
+            <input id="ln" name="last_name" type="text" required value="{{ form.last_name }}">
+          </div>
         </div>
         <div class="field-row">
-          <div class="field full"><label for="addr">Address</label><input id="addr" type="text" required></div>
+          <div class="field full">
+            <label for="addr">Address</label>
+            <input id="addr" name="address" type="text" required value="{{ form.address }}">
+          </div>
         </div>
         <div class="field-row">
-          <div class="field"><label for="city">City</label><input id="city" type="text" required></div>
-          <div class="field"><label for="country">Country</label>
-            <select id="country">
-              <option>Bahrain</option>
-              <option>Saudi Arabia</option>
-              <option>United Arab Emirates</option>
-              <option>Kuwait</option>
-              <option>Other</option>
+          <div class="field">
+            <label for="city">City</label>
+            <input id="city" name="city" type="text" required value="{{ form.city }}">
+          </div>
+          <div class="field">
+            <label for="country">Country</label>
+            <select id="country" name="country" required>
+              {% for country in countries %}
+              <option value="{{ country }}" {% if form.country == country %}selected{% endif %}>{{ country }}</option>
+              {% endfor %}
             </select>
           </div>
         </div>
         <div class="field-row">
-          <div class="field full"><label for="phone">Phone</label><input id="phone" type="tel" required></div>
+          <div class="field full">
+            <label for="phone">Phone</label>
+            <input id="phone" name="phone" type="tel" required value="{{ form.phone }}">
+          </div>
         </div>
       </fieldset>
 
       <fieldset>
         <legend>Payment</legend>
         <div class="pay-options">
-          <label class="pay-option is-active"><input type="radio" name="pay" checked> Credit / Debit Card</label>
-          <label class="pay-option"><input type="radio" name="pay"> BenefitPay</label>
-          <label class="pay-option"><input type="radio" name="pay"> Cash on Delivery</label>
+          <label class="pay-option is-disabled">
+            <input type="radio" name="payment_method" value="card" disabled>
+            Credit / Debit Card
+            <span class="soon">Coming soon</span>
+          </label>
+          <label class="pay-option is-disabled">
+            <input type="radio" name="payment_method" value="benefit" disabled>
+            BenefitPay
+            <span class="soon">Coming soon</span>
+          </label>
+          <label class="pay-option is-active">
+            <input type="radio" name="payment_method" value="cod" checked>
+            Cash on Delivery
+          </label>
         </div>
       </fieldset>
 
-      <button class="btn btn-primary btn-block" type="submit">Place Order — BHD 74.500</button>
+      <button class="btn btn-primary btn-block" type="submit" id="placeOrder">
+        Place Order — {{ checkout_total_label }}
+      </button>
     </div>
 
     <aside class="summary">
       <h3>Order Summary</h3>
+      {% for line in cart_lines %}
       <div class="mini-item">
+        {% if line.thumb %}
+        <img class="ph" src="{{ line.thumb }}" alt="">
+        {% else %}
         <div class="ph tone-a"></div>
-        <div><div class="n">The Layla Abaya</div><div class="m">Black · S · Qty 1</div></div>
-        <div class="p">BHD 42.000</div>
+        {% endif %}
+        <div>
+          <div class="n">{{ line.name }}</div>
+          <div class="m">{{ line.color }} · {{ line.size }} · Qty {{ line.quantity }}</div>
+        </div>
+        <div class="p">{{ line.line_label }}</div>
       </div>
-      <div class="mini-item">
-        <div class="ph tone-c"></div>
-        <div><div class="n">Rima Linen Jalabiya</div><div class="m">Stone · M · Qty 1</div></div>
-        <div class="p">BHD 29.000</div>
-      </div>
-      <div class="summary-row"><span>Subtotal</span><span>BHD 71.000</span></div>
-      <div class="summary-row"><span>Shipping</span><span>BHD 3.500</span></div>
-      <div class="summary-row total"><span>Total</span><span>BHD 74.500</span></div>
+      {% endfor %}
+      <div class="summary-row"><span>Subtotal</span><span>{{ cart_subtotal_label }}</span></div>
+      <div class="summary-row"><span>Shipping</span><span>{{ shipping_label }}</span></div>
+      <div class="summary-row total"><span>Total</span><span>{{ checkout_total_label }}</span></div>
     </aside>
   </form>
 </div>
@@ -83,12 +114,33 @@
 
 {% block extra_js %}
 <script>
-  document.querySelectorAll('.pay-option').forEach(o=>{
-    o.addEventListener('click',()=>{
-      document.querySelectorAll('.pay-option').forEach(x=>x.classList.remove('is-active'));
-      o.classList.add('is-active');
-      o.querySelector('input').checked = true;
+(function () {
+  {% if checkout_error %}
+  if (window.showStorefrontToast) {
+    window.showStorefrontToast({{ checkout_error | tojson }});
+  }
+  {% endif %}
+
+  document.querySelectorAll('.pay-option:not(.is-disabled)').forEach(function (option) {
+    option.addEventListener('click', function () {
+      document.querySelectorAll('.pay-option').forEach(function (el) {
+        el.classList.remove('is-active');
+      });
+      option.classList.add('is-active');
+      var input = option.querySelector('input');
+      if (input && !input.disabled) input.checked = true;
     });
   });
+
+  var form = document.getElementById('checkoutForm');
+  var btn = document.getElementById('placeOrder');
+  if (form && btn) {
+    form.addEventListener('submit', function () {
+      if (!form.checkValidity()) return;
+      btn.disabled = true;
+      btn.textContent = 'Placing order…';
+    });
+  }
+})();
 </script>
 {% endblock %}

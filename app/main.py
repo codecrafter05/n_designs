@@ -16,6 +16,7 @@ from app.api.v1.endpoints.web import (
 )
 from app.core.database import SessionLocal
 from app.api.v1.endpoints.admin_categories import router as admin_categories_router
+from app.api.v1.endpoints.admin_orders import router as admin_orders_router
 from app.api.v1.endpoints.admin_products import router as admin_products_router
 from app.api.v1.endpoints.cart import router as cart_router
 
@@ -46,6 +47,7 @@ app.include_router(router)
 # Web (HTML) routes — must come after static mounts
 app.include_router(admin_categories_router)
 app.include_router(admin_products_router)
+app.include_router(admin_orders_router)
 app.include_router(cart_router)
 app.include_router(web_router)
 
