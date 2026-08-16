@@ -240,3 +240,30 @@ body {
 }
 
 .img-preview { max-width: 180px; max-height: 180px; border-radius: 12px; object-fit: cover; }
+
+/* Form controls — charcoal instead of Bootstrap blue */
+.form-check-input:checked {
+  background-color: var(--admin-ink);
+  border-color: var(--admin-ink);
+}
+.form-check-input:focus {
+  border-color: var(--admin-ink);
+  box-shadow: 0 0 0 .2rem rgba(43, 43, 47, .15);
+}
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--admin-ink);
+  box-shadow: 0 0 0 .2rem rgba(43, 43, 47, .12);
+}
+.form-control-color {
+  width: 3rem;
+  height: calc(2.5rem + 2px);
+  padding: .25rem;
+}
+
+/* Products — layout only; cards/inputs/buttons come from Maxton + btn-admin-* */
+.prod-gallery-card { width: 140px; }
+.prod-gallery-card .img-preview { max-width: 100%; height: 110px; }
+.prod-sale-chip { min-height: 1.25rem; color: transparent; }
+.prod-sale-chip.is-on { color: #1b5e20; }
+.prod-sale-chip.is-warn { color: #8a1c13; }

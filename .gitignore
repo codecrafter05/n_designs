@@ -10,3 +10,5 @@ build/
 .DS_Store
 static/uploads/categories/*
 !static/uploads/categories/.gitkeep
+static/uploads/products/*
+!static/uploads/products/.gitkeep

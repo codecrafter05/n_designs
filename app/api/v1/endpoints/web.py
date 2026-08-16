@@ -169,11 +169,6 @@ def _section_page(request: Request, template: str, page_title: str):
     )
 
 
-@router.get("/admin/products", response_class=HTMLResponse, include_in_schema=False)
-def products_page(request: Request):
-    return _section_page(request, "admin/products/index.html", "Products")
-
-
 @router.get("/admin/orders", response_class=HTMLResponse, include_in_schema=False)
 def orders_page(request: Request):
     return _section_page(request, "admin/orders/index.html", "Orders")

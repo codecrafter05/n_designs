@@ -24,7 +24,10 @@ if TYPE_CHECKING:
 
 class Product(Base):
     """Catalog product. category_id must reference a leaf subcategory
-    (Category.parent_id IS NOT NULL) — enforced in application code later.
+    (Category.parent_id IS NOT NULL) — enforced in admin create/update.
+
+    Pricing lives on ProductVariant, not here. Images are a shared gallery
+    on this product (Product.images), not per color.
     """
 
     __tablename__ = "products"
@@ -38,6 +41,9 @@ class Product(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     slug: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Deprecated: not the source of truth for what a product costs.
+    # Use ProductVariant.price / compare_at_price. May be dropped in a later
+    # migration once nothing reads this column.
     base_price: Mapped[float] = mapped_column(Numeric(12, 3), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
@@ -54,6 +60,11 @@ class Product(Base):
     colors: Mapped[list[ProductColor]] = relationship(
         back_populates="product",
         cascade="all, delete-orphan",
+    )
+    images: Mapped[list[ProductImage]] = relationship(
+        back_populates="product",
+        cascade="all, delete-orphan",
+        order_by="ProductImage.sort_order",
     )
 
 
@@ -73,10 +84,6 @@ class ProductColor(Base):
     )
 
     product: Mapped[Product] = relationship(back_populates="colors")
-    images: Mapped[list[ProductImage]] = relationship(
-        back_populates="color",
-        cascade="all, delete-orphan",
-    )
     variants: Mapped[list[ProductVariant]] = relationship(
         back_populates="color",
         cascade="all, delete-orphan",
@@ -84,22 +91,29 @@ class ProductColor(Base):
 
 
 class ProductImage(Base):
+    """Shared gallery image for a product (not per-color)."""
+
     __tablename__ = "product_images"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    product_color_id: Mapped[int] = mapped_column(
-        ForeignKey("product_colors.id", ondelete="CASCADE"),
+    product_id: Mapped[int] = mapped_column(
+        ForeignKey("products.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
     image_url: Mapped[str] = mapped_column(String(500), nullable=False)
     sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
-    color: Mapped[ProductColor] = relationship(back_populates="images")
+    product: Mapped[Product] = relationship(back_populates="images")
 
 
 class ProductVariant(Base):
-    """Sellable SKU. Out of stock = stock_quantity 0; the row stays visible."""
+    """Sellable SKU. Out of stock = stock_quantity 0; the row stays visible.
+
+    Price is per size+color combination. A variant is on sale when
+    compare_at_price IS NOT NULL AND compare_at_price > price. That flag is
+    computed at query time from these two columns — never stored separately.
+    """
 
     __tablename__ = "product_variants"
     __table_args__ = (
@@ -114,6 +128,8 @@ class ProductVariant(Base):
     )
     size: Mapped[str] = mapped_column(String(50), nullable=False)
     stock_quantity: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    price: Mapped[float] = mapped_column(Numeric(12, 3), nullable=False)
+    compare_at_price: Mapped[float | None] = mapped_column(Numeric(12, 3), nullable=True)
 
     color: Mapped[ProductColor] = relationship(back_populates="variants")
     order_items: Mapped[list[OrderItem]] = relationship(back_populates="variant")

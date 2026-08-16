@@ -1,0 +1,366 @@
+{% extends "admin/base.html" %}
+
+{% block title %}N Designs — {{ 'Edit Product' if product else 'Add Product' }}{% endblock %}
+
+{% block content %}
+  <div class="page-breadcrumb d-none d-sm-flex align-items-center mb-3">
+    <div class="breadcrumb-title pe-3">N Designs</div>
+    <div class="ps-3">
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-0 p-0">
+          <li class="breadcrumb-item"><a href="/admin/dashboard"><i class="material-icons-outlined">home</i></a></li>
+          <li class="breadcrumb-item"><a href="/admin/products">Products</a></li>
+          <li class="breadcrumb-item active" aria-current="page">{{ 'Edit' if product else 'Add' }}</li>
+        </ol>
+      </nav>
+    </div>
+  </div>
+
+  <form id="product-form" method="post"
+        action="{{ '/admin/products/' ~ product.id ~ '/edit' if product else '/admin/products' }}"
+        enctype="multipart/form-data">
+    <input type="hidden" name="inventory_json" id="inventory_json">
+    <input type="hidden" name="gallery_json" id="gallery_json">
+
+    <div class="card rounded-4 mb-3">
+      <div class="card-body p-4">
+        <h4 class="fw-bold mb-4">{{ 'Edit product' if product else 'Add product' }}</h4>
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label" for="gallery-input">Images</label>
+            <div class="form-text mt-0 mb-2">JPG, PNG, or WebP. Drag to reorder. First image is the thumbnail.</div>
+            <div id="gallery" class="d-flex flex-wrap gap-3 mb-3"></div>
+            <input class="form-control" type="file" id="gallery-input"
+                   accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" multiple>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="name">Name</label>
+            <input class="form-control" type="text" id="name" name="name" required
+                   value="{{ product.name if product else '' }}">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="category_id">Category</label>
+            <select class="form-select" id="category_id" name="category_id" required>
+              <option value="">Select a subcategory</option>
+              {% for parent, children in groups %}
+              <optgroup label="{{ parent.name }}">
+                {% for child in children %}
+                <option value="{{ child.id }}" {% if product and product.category_id == child.id %}selected{% endif %}>
+                  {{ child.name }}
+                </option>
+                {% endfor %}
+              </optgroup>
+              {% endfor %}
+            </select>
+            <div class="form-text">Products attach to a subcategory, never a top-level category.</div>
+          </div>
+          <div class="col-12">
+            <label class="form-label" for="description">Description</label>
+            <textarea class="form-control" id="description" name="description" rows="4">{{ product.description if product and product.description else '' }}</textarea>
+          </div>
+          <div class="col-12">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" role="switch" value="1" id="is_active" name="is_active"
+                     {% if not product or product.is_active %}checked{% endif %}>
+              <label class="form-check-label" for="is_active">Active — visible in the catalog</label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card rounded-4 mb-3">
+      <div class="card-body p-4">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+          <h5 class="mb-0">Inventory</h5>
+          <button type="button" class="btn btn-admin-primary" id="add-color">Add Color</button>
+        </div>
+        <p class="form-text mt-0 mb-3">Each color can have its own sizes, stock, and prices. Compare-at price is optional — if it’s higher than price, that size is on sale.</p>
+        <div id="inventory" class="d-flex flex-column gap-3"></div>
+      </div>
+    </div>
+
+    <div class="d-flex gap-2 mb-4">
+      <button type="submit" class="btn btn-admin-primary">{{ 'Save changes' if product else 'Create product' }}</button>
+      <a href="/admin/products" class="btn btn-admin-secondary">Cancel</a>
+    </div>
+  </form>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
+<script>
+(function () {
+  var INITIAL_INVENTORY = JSON.parse({{ inventory_json | tojson }});
+  var INITIAL_GALLERY = JSON.parse({{ gallery_json | tojson }});
+  var galleryEl = document.getElementById('gallery');
+  var inventoryEl = document.getElementById('inventory');
+  var galleryItems = [];
+  var newFileIndex = 0;
+
+  function el(html) {
+    var wrap = document.createElement('div');
+    wrap.innerHTML = html.trim();
+    return wrap.firstElementChild;
+  }
+
+  function escapeHtml(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function renderGallery() {
+    galleryEl.innerHTML = '';
+    if (!galleryItems.length) {
+      galleryEl.innerHTML = '<p class="form-text mb-0">No images yet</p>';
+      return;
+    }
+    galleryItems.forEach(function (item, index) {
+      var node = el(
+        '<div class="card rounded-4 shadow-none border prod-gallery-card" data-index="' + index + '">' +
+          '<div class="card-body p-2 text-center">' +
+            '<span class="material-icons-outlined cat-handle">drag_indicator</span>' +
+            '<img src="' + item.url + '" alt="" class="img-preview w-100">' +
+            '<button type="button" class="btn btn-sm btn-admin-danger w-100 mt-2 prod-gallery-remove">Remove</button>' +
+          '</div>' +
+        '</div>'
+      );
+      node.querySelector('.prod-gallery-remove').addEventListener('click', function () {
+        if (item.url && item.url.indexOf('blob:') === 0) URL.revokeObjectURL(item.url);
+        galleryItems.splice(index, 1);
+        renderGallery();
+      });
+      galleryEl.appendChild(node);
+    });
+  }
+
+  new Sortable(galleryEl, {
+    handle: '.cat-handle',
+    animation: 150,
+    ghostClass: 'sortable-ghost',
+    onEnd: function () {
+      var next = [];
+      galleryEl.querySelectorAll('.prod-gallery-card').forEach(function (node) {
+        var i = parseInt(node.getAttribute('data-index'), 10);
+        if (!isNaN(i) && galleryItems[i]) next.push(galleryItems[i]);
+      });
+      galleryItems = next;
+      renderGallery();
+    }
+  });
+
+  document.getElementById('gallery-input').addEventListener('change', function (e) {
+    Array.from(e.target.files || []).forEach(function (file) {
+      galleryItems.push({
+        file: file,
+        newIndex: newFileIndex++,
+        url: URL.createObjectURL(file)
+      });
+    });
+    e.target.value = '';
+    renderGallery();
+  });
+
+  INITIAL_GALLERY.forEach(function (item) {
+    galleryItems.push({ id: item.id, url: item.url });
+  });
+  renderGallery();
+
+  function saleState(price, compare) {
+    var p = parseFloat(price);
+    var c = parseFloat(compare);
+    if (!compare || isNaN(c) || isNaN(p)) return '';
+    if (c > p) return 'sale';
+    return 'warn';
+  }
+
+  function variantRow(data) {
+    data = data || {};
+    var price = data.price || '';
+    var compare = data.compare_at_price || '';
+    var state = saleState(price, compare);
+    var row = el(
+      '<div class="card rounded-4 shadow-none border prod-variant-row">' +
+        '<div class="card-body py-3">' +
+          (data.id ? '<input type="hidden" class="v-id" value="' + data.id + '">' : '') +
+          '<div class="row g-3 align-items-end">' +
+            '<div class="col-md-3">' +
+              '<label class="form-label">Size</label>' +
+              '<input class="form-control v-size" type="text" placeholder="e.g. XL" value="' + escapeHtml(data.size || '') + '">' +
+            '</div>' +
+            '<div class="col-md-2">' +
+              '<label class="form-label">Qty</label>' +
+              '<input class="form-control v-qty" type="number" min="0" step="1" value="' + escapeHtml(data.stock_quantity != null ? data.stock_quantity : 0) + '">' +
+            '</div>' +
+            '<div class="col-md-2">' +
+              '<label class="form-label">Price</label>' +
+              '<input class="form-control v-price" type="number" min="0" step="0.001" placeholder="0.000" value="' + escapeHtml(price) + '">' +
+            '</div>' +
+            '<div class="col-md-2">' +
+              '<label class="form-label">Compare at</label>' +
+              '<input class="form-control v-compare" type="number" min="0" step="0.001" placeholder="Optional" value="' + escapeHtml(compare) + '">' +
+            '</div>' +
+            '<div class="col-md-auto">' +
+              '<span class="form-text prod-sale-chip mb-0' + (state === 'sale' ? ' is-on' : '') + (state === 'warn' ? ' is-warn' : '') + '">' +
+                (state === 'sale' ? 'On sale' : state === 'warn' ? 'Must be higher' : '') +
+              '</span>' +
+            '</div>' +
+            '<div class="col-md-auto ms-md-auto">' +
+              '<button type="button" class="btn btn-sm btn-admin-danger v-remove">Remove</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>'
+    );
+    function refreshChip() {
+      var chip = row.querySelector('.prod-sale-chip');
+      var next = saleState(row.querySelector('.v-price').value, row.querySelector('.v-compare').value);
+      chip.classList.toggle('is-on', next === 'sale');
+      chip.classList.toggle('is-warn', next === 'warn');
+      chip.textContent = next === 'sale' ? 'On sale' : next === 'warn' ? 'Must be higher' : '';
+    }
+    row.querySelector('.v-price').addEventListener('input', refreshChip);
+    row.querySelector('.v-compare').addEventListener('input', refreshChip);
+    row.querySelector('.v-remove').addEventListener('click', function () { row.remove(); });
+    return row;
+  }
+
+  function colorGroup(data) {
+    data = data || {};
+    var hex = data.color_hex || '#2b2b2f';
+    var group = el(
+      '<div class="card rounded-4 shadow-none border prod-color-group">' +
+        '<div class="card-body">' +
+          (data.id ? '<input type="hidden" class="c-id" value="' + data.id + '">' : '') +
+          '<div class="row g-3 align-items-end mb-3">' +
+            '<div class="col-md-6">' +
+              '<label class="form-label">Color name</label>' +
+              '<input class="form-control c-name" type="text" placeholder="Color name" value="' + escapeHtml(data.color_name || '') + '">' +
+            '</div>' +
+            '<div class="col-auto">' +
+              '<label class="form-label">Swatch</label>' +
+              '<input class="form-control form-control-color c-hex" type="color" value="' + escapeHtml(hex) + '" title="Swatch">' +
+            '</div>' +
+            '<div class="col-md-auto ms-md-auto d-flex gap-2">' +
+              '<button type="button" class="btn btn-sm btn-admin-secondary c-add-size">Add Size</button>' +
+              '<button type="button" class="btn btn-sm btn-admin-danger c-remove">Remove color</button>' +
+            '</div>' +
+          '</div>' +
+          '<div class="prod-variant-list d-flex flex-column gap-3"></div>' +
+        '</div>' +
+      '</div>'
+    );
+    var list = group.querySelector('.prod-variant-list');
+    (data.variants && data.variants.length ? data.variants : [{}]).forEach(function (row) {
+      list.appendChild(variantRow(row));
+    });
+    group.querySelector('.c-add-size').addEventListener('click', function () {
+      list.appendChild(variantRow({}));
+    });
+    group.querySelector('.c-remove').addEventListener('click', function () { group.remove(); });
+    return group;
+  }
+
+  function addColor(data) {
+    inventoryEl.appendChild(colorGroup(data));
+  }
+
+  document.getElementById('add-color').addEventListener('click', function () { addColor({}); });
+
+  if (INITIAL_INVENTORY.colors && INITIAL_INVENTORY.colors.length) {
+    INITIAL_INVENTORY.colors.forEach(addColor);
+  } else {
+    addColor({});
+  }
+
+  function collectInventory() {
+    var colors = [];
+    var error = '';
+    inventoryEl.querySelectorAll('.prod-color-group').forEach(function (group) {
+      if (error) return;
+      var name = group.querySelector('.c-name').value.trim();
+      if (!name) { error = 'Every color needs a name.'; return; }
+      var variants = [];
+      var sizes = {};
+      group.querySelectorAll('.prod-variant-row').forEach(function (row) {
+        if (error) return;
+        var size = row.querySelector('.v-size').value.trim();
+        var qty = row.querySelector('.v-qty').value;
+        var price = row.querySelector('.v-price').value;
+        var compare = row.querySelector('.v-compare').value.trim();
+        var idEl = row.querySelector('.v-id');
+        if (!size) { error = 'Every size under “' + name + '” needs a label.'; return; }
+        if (sizes[size.toLowerCase()]) { error = '“' + name + '” has a duplicate size “' + size + '”.'; return; }
+        sizes[size.toLowerCase()] = true;
+        var p = parseFloat(price);
+        if (!(p > 0)) { error = 'Price for “' + name + ' / ' + size + '” must be greater than zero.'; return; }
+        if (compare) {
+          var c = parseFloat(compare);
+          if (!(c > p)) { error = 'Compare-at for “' + name + ' / ' + size + '” must be higher than price.'; return; }
+        }
+        var q = parseInt(qty, 10);
+        if (isNaN(q) || q < 0) { error = 'Quantity must be zero or more.'; return; }
+        variants.push({
+          id: idEl ? parseInt(idEl.value, 10) : null,
+          size: size,
+          stock_quantity: q,
+          price: price,
+          compare_at_price: compare || null
+        });
+      });
+      if (!variants.length) { error = '“' + name + '” needs at least one size.'; return; }
+      var idEl = group.querySelector('.c-id');
+      colors.push({
+        id: idEl ? parseInt(idEl.value, 10) : null,
+        color_name: name,
+        color_hex: group.querySelector('.c-hex').value,
+        variants: variants
+      });
+    });
+    if (!colors.length && !error) error = 'Add at least one color with a size.';
+    return { colors: colors, error: error };
+  }
+
+  document.getElementById('product-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var inv = collectInventory();
+    if (inv.error) {
+      window.showAdminToast(inv.error, false);
+      return;
+    }
+    if (!document.getElementById('category_id').value) {
+      window.showAdminToast('Pick a subcategory.', false);
+      return;
+    }
+    document.getElementById('inventory_json').value = JSON.stringify({ colors: inv.colors });
+
+    var galleryPayload = [];
+    var files = [];
+    galleryItems.forEach(function (item) {
+      if (item.id) {
+        galleryPayload.push({ id: item.id });
+      } else if (item.file) {
+        galleryPayload.push({ new: files.length });
+        files.push(item.file);
+      }
+    });
+    document.getElementById('gallery_json').value = JSON.stringify(galleryPayload);
+
+    var fd = new FormData(e.target);
+    files.forEach(function (file) { fd.append('new_images', file); });
+
+    var btn = e.target.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    fetch(e.target.action, { method: 'POST', body: fd, redirect: 'follow' })
+      .then(function (res) {
+        window.location.href = res.url;
+      })
+      .catch(function () {
+        btn.disabled = false;
+        window.showAdminToast('Could not save — try again.', false);
+      });
+  });
+})();
+</script>
+{% endblock %}

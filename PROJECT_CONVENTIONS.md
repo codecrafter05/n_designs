@@ -8,6 +8,12 @@ This file records standing decisions made during development that are not obviou
 
 Admin helper: `confirmAction({ title, message, confirmLabel, cancelLabel, danger })` → `Promise<boolean>`. Markup lives in `views/admin/components/confirm-modal.html` and is included from `views/admin/base.html`. Forms can opt in with `data-confirm` plus `data-confirm-title`, `data-confirm-message`, `data-confirm-label`, and optional `data-confirm-danger="false"` for a non-destructive confirm (uses `btn-admin-primary` instead of `btn-admin-danger`).
 
+## Admin UI — Always Use the Template System
+
+**Never hand-roll admin UI from scratch.** Every new admin screen (forms, tables, cards, buttons, inputs, uploads, alerts) MUST reuse the actual markup patterns and CSS classes already present in the `template/` Maxton kit, combined with the project's own overrides in `template/assets/css/n-designs-admin.css` (the `btn-admin-*` / `alert-admin-*` classes, the charcoal theme, etc.). Before building any new admin page, look at how a similar element already looks in `template/*.html` (raw Maxton reference) or in an already-built page like the Categories screens (project-approved reference) and match it exactly — same classes, same structure, same spacing conventions. Do not invent new unstyled HTML elements, new one-off CSS, or a different visual pattern for the same type of component (e.g. a form input, a button, a card) than what's already established elsewhere in the admin. If a needed component genuinely doesn't exist yet in either place, flag it for a design decision instead of guessing.
+
+Approved references: Categories list/form (`views/admin/category/`), Maxton `form-layouts.html`, `form-elements.html`, `form-repeater.html`, `form-radios-and-checkboxes.html`, `table-basic-table.html`, `ecommerce-products.html`.
+
 ## URL conventions
 
 Admin section pages live directly under `/admin/{section}`, not `/admin/dashboard/{section}`. Only the dashboard home page itself is `/admin/dashboard`.
