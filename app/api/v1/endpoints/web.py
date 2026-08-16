@@ -82,6 +82,7 @@ def homepage_featured_subcategories(db: Session) -> list[Category]:
 
 
 _TONES = ("a", "b", "c", "d")
+NEW_ARRIVALS_LIMIT = 8
 
 
 def _fmt_bhd(amount) -> str:
@@ -113,13 +114,15 @@ def _product_query(db: Session):
     )
 
 
-def _active_products(db: Session) -> list[Product]:
-    return (
+def _active_products(db: Session, limit: int | None = None) -> list[Product]:
+    query = (
         _product_query(db)
         .filter(Product.is_active.is_(True))
         .order_by(Product.created_at.desc(), Product.id.desc())
-        .all()
     )
+    if limit is not None:
+        query = query.limit(limit)
+    return query.all()
 
 
 def _product_card(product: Product, index: int = 0) -> dict:
@@ -213,7 +216,7 @@ def _storefront_page(
 def storefront_home(request: Request, db: Session = Depends(get_db)):
     top_categories = top_categories_with_child_counts(db)
     spotlight_subcategories = homepage_featured_subcategories(db)
-    products = _active_products(db)
+    products = _active_products(db, limit=NEW_ARRIVALS_LIMIT)
     featured = (
         _product_query(db)
         .filter(Product.is_active.is_(True), Product.is_featured.is_(True))
@@ -230,7 +233,7 @@ def storefront_home(request: Request, db: Session = Depends(get_db)):
         footer_categories=top_categories,
         spotlight_subcategories=spotlight_subcategories,
         featured_pieces=[_product_card(product, i) for i, product in enumerate(featured)],
-        new_arrivals=[_product_card(product, i) for i, product in enumerate(products[:8])],
+        new_arrivals=[_product_card(product, i) for i, product in enumerate(products)],
     )
 
 
