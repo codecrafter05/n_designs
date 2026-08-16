@@ -17,6 +17,7 @@ from app.api.v1.endpoints.web import (
 from app.core.database import SessionLocal
 from app.api.v1.endpoints.admin_categories import router as admin_categories_router
 from app.api.v1.endpoints.admin_products import router as admin_products_router
+from app.api.v1.endpoints.cart import router as cart_router
 
 TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "..", "template")
 STOREFRONT_STATIC_DIR = os.path.join(os.path.dirname(__file__), "..", "static")
@@ -45,6 +46,7 @@ app.include_router(router)
 # Web (HTML) routes — must come after static mounts
 app.include_router(admin_categories_router)
 app.include_router(admin_products_router)
+app.include_router(cart_router)
 app.include_router(web_router)
 
 _JSON_404_PREFIXES = ("/api", "/docs", "/redoc", "/assets", "/sass", "/static")

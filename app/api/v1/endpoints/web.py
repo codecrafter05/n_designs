@@ -9,6 +9,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import exists, func, select
 from sqlalchemy.orm import Session, aliased, selectinload
 
+from app.core.cart import get_or_create_cart, set_cart_cookie
 from app.core.config import settings
 from app.core.database import get_db
 from app.models.category import Category
@@ -266,6 +267,7 @@ def _pdp_payload(product: Product) -> str:
 def storefront_context(request: Request, *, nav_variant: str = "solid", **extra):
     extra.setdefault("footer_categories", extra.get("top_categories") or [])
     extra.setdefault("top_categories", [])
+    extra.setdefault("cart_count", 0)
     return {
         "request": request,
         "nav_variant": nav_variant,
@@ -273,6 +275,41 @@ def storefront_context(request: Request, *, nav_variant: str = "solid", **extra)
         "whatsapp_url": f"https://wa.me/{settings.WHATSAPP_NUMBER}",
         **extra,
     }
+
+
+def _cart_count(cart) -> int:
+    return sum(item.quantity for item in cart.items)
+
+
+def _cart_lines(cart) -> tuple[list[dict], str]:
+    lines = []
+    subtotal = Decimal("0")
+    for item in cart.items:
+        variant = item.variant
+        if variant is None or variant.color is None or variant.color.product is None:
+            continue
+        product = variant.color.product
+        payable = _payable(variant)
+        on_sale = _is_on_sale(variant)
+        line_total = payable * item.quantity
+        subtotal += line_total
+        lines.append(
+            {
+                "id": item.id,
+                "quantity": item.quantity,
+                "stock": variant.stock_quantity,
+                "name": product.name,
+                "slug": product.slug,
+                "color": variant.color.color_name,
+                "size": variant.size,
+                "thumb": product.images[0].image_url if product.images else None,
+                "unit_label": _fmt_bhd(payable),
+                "was_label": _fmt_bhd(variant.price) if on_sale else "",
+                "line_label": _fmt_bhd(line_total),
+                "on_sale": on_sale,
+            }
+        )
+    return lines, _fmt_bhd(subtotal) if lines else _fmt_bhd(0)
 
 
 def _storefront_page(
@@ -283,12 +320,20 @@ def _storefront_page(
     nav_variant: str = "solid",
     **extra,
 ):
-    if "footer_categories" not in extra and db is not None:
-        extra["footer_categories"] = top_categories_with_child_counts(db)
-    return templates.TemplateResponse(
+    needs_cookie = False
+    token = None
+    if db is not None:
+        if "footer_categories" not in extra:
+            extra["footer_categories"] = top_categories_with_child_counts(db)
+        cart, token, needs_cookie = get_or_create_cart(db, request)
+        extra.setdefault("cart_count", _cart_count(cart))
+    response = templates.TemplateResponse(
         template,
         storefront_context(request, nav_variant=nav_variant, **extra),
     )
+    if needs_cookie and token:
+        set_cart_cookie(response, token)
+    return response
 
 
 @router.get("/", response_class=HTMLResponse, include_in_schema=False)
@@ -455,7 +500,15 @@ def storefront_product(request: Request, slug: str, db: Session = Depends(get_db
 
 @router.get("/cart", response_class=HTMLResponse, include_in_schema=False)
 def storefront_cart(request: Request, db: Session = Depends(get_db)):
-    return _storefront_page(request, "storefront/cart.html", db=db)
+    cart, _, _ = get_or_create_cart(db, request)
+    lines, subtotal_label = _cart_lines(cart)
+    return _storefront_page(
+        request,
+        "storefront/cart.html",
+        db=db,
+        cart_lines=lines,
+        cart_subtotal_label=subtotal_label,
+    )
 
 
 @router.get("/checkout", response_class=HTMLResponse, include_in_schema=False)

@@ -18,6 +18,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
 
 if TYPE_CHECKING:
+    from app.models.cart import CartItem
     from app.models.category import Category
     from app.models.order import OrderItem
 
@@ -139,3 +140,4 @@ class ProductVariant(Base):
 
     color: Mapped[ProductColor] = relationship(back_populates="variants")
     order_items: Mapped[list[OrderItem]] = relationship(back_populates="variant")
+    cart_items: Mapped[list[CartItem]] = relationship(back_populates="variant")

@@ -59,7 +59,7 @@
       </div>
 
       <div class="pdp-actions">
-        <button class="btn btn-primary btn-block" type="button">Add to Bag</button>
+        <button class="btn btn-primary btn-block" type="button" id="addToBag" disabled>Add to Bag</button>
         <a class="btn btn-ghost btn-block" href="{{ whatsapp_url }}" target="_blank" rel="noopener">Ask About This Piece</a>
       </div>
       {% else %}
@@ -148,6 +148,7 @@
   var sizeLabel = document.getElementById('sizeLabel');
   var colorIndex = 0;
   var sizeIndex = 0;
+  var addBtn = document.getElementById('addToBag');
 
   function firstInStock(variants) {
     for (var i = 0; i < variants.length; i++) {
@@ -201,6 +202,9 @@
     var selected = variants[sizeIndex];
     sizeLabel.textContent = selected ? 'Size — ' + selected.size : 'Size — Select';
     renderPrice(selected);
+    if (addBtn) {
+      addBtn.disabled = !(selected && selected.stock > 0);
+    }
   }
 
   function renderSwatches() {
@@ -270,6 +274,40 @@
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') sizeModal.classList.remove('is-open');
   });
+
+  if (addBtn) {
+    addBtn.addEventListener('click', function () {
+      var color = CATALOG.colors[colorIndex];
+      var variant = color && color.variants ? color.variants[sizeIndex] : null;
+      if (!variant || variant.stock <= 0) return;
+      addBtn.disabled = true;
+      fetch('/cart/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ product_variant_id: variant.id, quantity: 1 })
+      })
+        .then(function (res) { return res.json().then(function (data) { return { ok: res.ok, data: data }; }); })
+        .then(function (result) {
+          addBtn.disabled = false;
+          if (!result.ok || !result.data.ok) {
+            if (window.showStorefrontToast) {
+              window.showStorefrontToast(result.data.error || 'Could not add this piece.');
+            }
+            return;
+          }
+          if (window.flyToCart) {
+            window.flyToCart(addBtn, document.getElementById('pdpMain'));
+          }
+          if (window.updateCartBadge) window.updateCartBadge(result.data.count);
+        })
+        .catch(function () {
+          addBtn.disabled = false;
+          if (window.showStorefrontToast) {
+            window.showStorefrontToast('Could not add this piece. Try again.');
+          }
+        });
+    });
+  }
 })();
 </script>
 {% endblock %}

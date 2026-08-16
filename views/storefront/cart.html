@@ -12,59 +12,150 @@
     <h1>Your Bag</h1>
   </div>
 
-  <div class="cart-layout">
-    <div>
-      <div class="cart-item">
-        <div class="ph tone-a"></div>
+  {% if cart_lines %}
+  <div class="cart-layout" id="cartLayout">
+    <div id="cartLines">
+      {% for line in cart_lines %}
+      <div class="cart-item" data-item-id="{{ line.id }}" data-stock="{{ line.stock }}">
+        <a href="/product/{{ line.slug }}">
+          {% if line.thumb %}
+          <img class="ph" src="{{ line.thumb }}" alt="">
+          {% else %}
+          <div class="ph tone-a"></div>
+          {% endif %}
+        </a>
         <div class="ci-info">
-          <div class="name">The Layla Abaya</div>
-          <div class="meta">Black · Size S</div>
+          <a href="/product/{{ line.slug }}" class="name">{{ line.name }}</a>
+          <div class="meta">{{ line.color }} · Size {{ line.size }}</div>
           <div class="ci-qty">
-            <button aria-label="Decrease quantity">−</button><span>1</span><button aria-label="Increase quantity">+</button>
+            <button type="button" data-qty="-1" aria-label="Decrease quantity">−</button>
+            <span data-qty-value>{{ line.quantity }}</span>
+            <button type="button" data-qty="1" aria-label="Increase quantity">+</button>
           </div>
-          <button class="ci-remove">Remove</button>
+          <button type="button" class="ci-remove" data-remove>Remove</button>
         </div>
-        <div class="ci-price">BHD 42.000</div>
-      </div>
-      <div class="cart-item">
-        <div class="ph tone-c"></div>
-        <div class="ci-info">
-          <div class="name">Rima Linen Jalabiya</div>
-          <div class="meta">Stone · Size M</div>
-          <div class="ci-qty">
-            <button aria-label="Decrease quantity">−</button><span>1</span><button aria-label="Increase quantity">+</button>
-          </div>
-          <button class="ci-remove">Remove</button>
+        <div class="ci-price">
+          {% if line.on_sale and line.was_label %}<span class="was">{{ line.was_label }}</span>{% endif %}
+          <span data-line-price>{{ line.line_label }}</span>
         </div>
-        <div class="ci-price">BHD 29.000</div>
       </div>
-
-      <a href="/products" class="text-link" style="margin-top:26px;display:inline-flex;">← Continue shopping</a>
+      {% endfor %}
+      <a href="/categories" class="text-link" style="margin-top:26px;display:inline-flex;">← Continue shopping</a>
     </div>
 
     <aside class="summary">
       <h3>Order Summary</h3>
-      <div class="summary-row"><span>Subtotal</span><span>BHD 71.000</span></div>
+      <div class="summary-row"><span>Subtotal</span><span id="cartSubtotal">{{ cart_subtotal_label }}</span></div>
       <div class="summary-row"><span>Shipping</span><span>Calculated at checkout</span></div>
       <div class="promo">
         <input type="text" placeholder="Promo code">
         <button type="button">Apply</button>
       </div>
-      <div class="summary-row total"><span>Total</span><span>BHD 71.000</span></div>
+      <div class="summary-row total"><span>Total</span><span id="cartTotal">{{ cart_subtotal_label }}</span></div>
       <a href="/checkout" class="btn btn-primary btn-block" style="margin-top:22px;">Checkout</a>
       <a href="{{ whatsapp_url }}" class="btn btn-ghost btn-block" style="margin-top:10px;" target="_blank">Order via WhatsApp</a>
     </aside>
   </div>
+  {% else %}
+  <div class="cart-empty">
+    <p>Your bag is empty.</p>
+    <a href="/categories" class="text-link">Browse categories →</a>
+  </div>
+  {% endif %}
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-  document.querySelectorAll('.ci-qty').forEach(q=>{
-    const span = q.querySelector('span');
-    let n = 1;
-    q.children[0].addEventListener('click',()=>{ if(n>1){n--; span.textContent=n;} });
-    q.children[2].addEventListener('click',()=>{ n++; span.textContent=n; });
+(function () {
+  var layout = document.getElementById('cartLayout');
+  if (!layout) return;
+
+  function post(url, body) {
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    }).then(function (res) {
+      return res.json().then(function (data) { return { ok: res.ok, data: data }; });
+    });
+  }
+
+  function setTotals(label) {
+    var sub = document.getElementById('cartSubtotal');
+    var total = document.getElementById('cartTotal');
+    if (sub) sub.textContent = label;
+    if (total) total.textContent = label;
+  }
+
+  function showEmpty() {
+    layout.outerHTML =
+      '<div class="cart-empty"><p>Your bag is empty.</p>' +
+      '<a href="/categories" class="text-link">Browse categories →</a></div>';
+  }
+
+  layout.addEventListener('click', function (e) {
+    var row = e.target.closest('.cart-item');
+    if (!row) return;
+    var id = parseInt(row.getAttribute('data-item-id'), 10);
+    var stock = parseInt(row.getAttribute('data-stock'), 10);
+    var qtyEl = row.querySelector('[data-qty-value]');
+    var qty = parseInt(qtyEl.textContent, 10) || 1;
+
+    if (e.target.closest('[data-remove]')) {
+      post('/cart/remove', { cart_item_id: id }).then(function (result) {
+        if (!result.ok || !result.data.ok) {
+          if (window.showStorefrontToast) {
+            window.showStorefrontToast(result.data.error || 'Could not remove this piece.');
+          }
+          return;
+        }
+        var undo = result.data.undo;
+        row.remove();
+        if (window.updateCartBadge) window.updateCartBadge(result.data.count);
+        setTotals(result.data.subtotal_label);
+        if (!document.querySelector('.cart-item')) showEmpty();
+        if (window.showStorefrontToast) {
+          window.showStorefrontToast('Removed from bag', {
+            action: 'Undo',
+            onAction: function () {
+              if (!undo) return;
+              post('/cart/add', undo).then(function (again) {
+                if (again.ok && again.data.ok) window.location.reload();
+              });
+            }
+          });
+        }
+      });
+      return;
+    }
+
+    var stepBtn = e.target.closest('[data-qty]');
+    if (!stepBtn) return;
+    var next = qty + parseInt(stepBtn.getAttribute('data-qty'), 10);
+    if (next < 1) return;
+    if (next > stock) {
+      if (window.showStorefrontToast) {
+        window.showStorefrontToast('Only ' + stock + ' left in this size.');
+      }
+      return;
+    }
+    post('/cart/update', { cart_item_id: id, quantity: next }).then(function (result) {
+      if (!result.ok || !result.data.ok) {
+        if (window.showStorefrontToast) {
+          window.showStorefrontToast(result.data.error || 'Could not update quantity.');
+        }
+        return;
+      }
+      qtyEl.textContent = result.data.line ? result.data.line.quantity : next;
+      if (result.data.line) {
+        var priceEl = row.querySelector('[data-line-price]');
+        if (priceEl) priceEl.textContent = result.data.line.line_label;
+      }
+      if (window.updateCartBadge) window.updateCartBadge(result.data.count);
+      setTotals(result.data.subtotal_label);
+    });
   });
+})();
 </script>
 {% endblock %}
