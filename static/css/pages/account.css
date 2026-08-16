@@ -1,0 +1,25 @@
+.auth-page,.account-page{max-width:440px;padding:36px 0 110px;}
+.auth-page h1,.account-page h1{font-size:clamp(28px,3.4vw,42px);margin-bottom:10px;}
+.auth-lead{color:var(--ink-70);font-size:14.5px;line-height:1.7;margin-bottom:28px;}
+.auth-page .field{display:flex;flex-direction:column;gap:6px;margin-bottom:16px;}
+.auth-page .field label{font-size:11.5px;color:var(--ink-70);}
+.auth-page .field input{
+  border:1px solid var(--line);background:var(--white);padding:13px 14px;font:inherit;font-size:13.5px;color:var(--ink);
+}
+.auth-page .field input:focus{border-color:var(--ink);}
+.auth-page .btn{margin-top:8px;}
+.auth-switch{margin-top:22px;font-size:13.5px;color:var(--ink-70);}
+.auth-switch a{border-bottom:1px solid var(--ink-45);}
+.auth-switch a:hover{border-color:var(--ink);}
+
+.account-card{margin:0 0 32px;border:1px solid var(--line);}
+.account-card-head{
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  padding:22px 28px 0;
+}
+.account-card-head h2{font-size:12px;letter-spacing:.14em;text-transform:uppercase;margin:0;}
+.account-facts{display:grid;gap:16px;margin:0;padding:20px 28px 28px;}
+.account-facts dt{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-45);margin-bottom:4px;}
+.account-facts dd{margin:0;font-size:14.5px;}
+.account-edit-form{max-width:640px;padding:8px 0 110px;}
+.account-edit-actions{display:flex;align-items:center;gap:22px;margin-top:8px;}

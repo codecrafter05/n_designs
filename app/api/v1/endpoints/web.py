@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session, aliased, selectinload
 
 from app.core.cart import get_or_create_cart, reload_cart, set_cart_cookie
 from app.core.config import settings
+from app.core.customer_auth import get_current_customer
 from app.core.database import get_db
 from app.core.orders import SHIPPING_BHD, order_number
 from app.models.cart import Cart
@@ -279,6 +280,7 @@ def storefront_context(request: Request, *, nav_variant: str = "solid", **extra)
     extra.setdefault("footer_categories", extra.get("top_categories") or [])
     extra.setdefault("top_categories", [])
     extra.setdefault("cart_count", 0)
+    extra.setdefault("current_customer", None)
     return {
         "request": request,
         "nav_variant": nav_variant,
@@ -338,6 +340,7 @@ def _storefront_page(
             extra["footer_categories"] = top_categories_with_child_counts(db)
         cart, token, needs_cookie = get_or_create_cart(db, request)
         extra.setdefault("cart_count", _cart_count(cart))
+        extra.setdefault("current_customer", get_current_customer(request, db))
     response = templates.TemplateResponse(
         template,
         storefront_context(request, nav_variant=nav_variant, **extra),

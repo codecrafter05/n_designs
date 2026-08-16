@@ -1,0 +1,49 @@
+{% extends "storefront/base.html" %}
+{% set nav_variant = "solid" %}
+
+{% block title %}Account — N Designs{% endblock %}
+
+{% block page_css %}<link rel="stylesheet" href="/static/css/pages/account.css">{% endblock %}
+
+{% block content %}
+<div class="wrap">
+  <div class="account-page">
+    <h1>Hello, {{ customer.name.split()[0] }}</h1>
+    <p class="auth-lead">Your saved contact details.</p>
+
+    <div class="account-card">
+      <div class="account-card-head">
+        <h2>Contact</h2>
+        <a href="/account/edit" class="text-link">Edit</a>
+      </div>
+    <dl class="account-facts">
+      <div><dt>Name</dt><dd>{{ customer.name or '—' }}</dd></div>
+      <div><dt>Email</dt><dd>{{ customer.email or '—' }}</dd></div>
+      <div><dt>Phone</dt><dd>{{ customer.phone or '—' }}</dd></div>
+      <div><dt>Address</dt><dd>{{ customer.address or '—' }}</dd></div>
+      <div><dt>City</dt><dd>{{ customer.city or '—' }}</dd></div>
+      <div><dt>Country</dt><dd>{{ customer.country or '—' }}</dd></div>
+    </dl>
+    </div>
+
+    <form method="post" action="/logout">
+      <button class="btn btn-ghost" type="submit">Log out</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  {% if notice %}
+  if (window.showStorefrontToast) {
+    window.showStorefrontToast({{ notice | tojson }});
+  }
+  if (window.history && window.history.replaceState) {
+    window.history.replaceState({}, '', '/account');
+  }
+  {% endif %}
+})();
+</script>
+{% endblock %}

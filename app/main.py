@@ -14,7 +14,9 @@ from app.api.v1.endpoints.web import (
     templates,
     top_categories_with_child_counts,
 )
+from app.core.customer_auth import get_current_customer
 from app.core.database import SessionLocal
+from app.api.v1.endpoints.account import router as account_router
 from app.api.v1.endpoints.admin_categories import router as admin_categories_router
 from app.api.v1.endpoints.admin_orders import router as admin_orders_router
 from app.api.v1.endpoints.admin_products import router as admin_products_router
@@ -49,6 +51,7 @@ app.include_router(admin_categories_router)
 app.include_router(admin_products_router)
 app.include_router(admin_orders_router)
 app.include_router(cart_router)
+app.include_router(account_router)
 app.include_router(web_router)
 
 _JSON_404_PREFIXES = ("/api", "/docs", "/redoc", "/assets", "/sass", "/static")
@@ -73,6 +76,7 @@ async def custom_http_exception_handler(request: Request, exc: StarletteHTTPExce
     db = SessionLocal()
     try:
         footer_categories = top_categories_with_child_counts(db)
+        current_customer = get_current_customer(request, db)
     finally:
         db.close()
     return templates.TemplateResponse(
@@ -81,6 +85,7 @@ async def custom_http_exception_handler(request: Request, exc: StarletteHTTPExce
             request,
             nav_variant="solid",
             footer_categories=footer_categories,
+            current_customer=current_customer,
         ),
         status_code=404,
     )

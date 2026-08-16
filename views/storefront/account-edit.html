@@ -1,0 +1,86 @@
+{% extends "storefront/base.html" %}
+{% set nav_variant = "solid" %}
+
+{% block title %}Edit profile — N Designs{% endblock %}
+
+{% block page_css %}
+<link rel="stylesheet" href="/static/css/pages/checkout.css">
+<link rel="stylesheet" href="/static/css/pages/account.css">
+{% endblock %}
+
+{% block content %}
+<div class="wrap">
+  <div class="co-header">
+    <h1>Edit profile</h1>
+  </div>
+
+  <form class="account-edit-form" method="post" action="/account/edit">
+    <fieldset>
+      <legend>Contact</legend>
+      <div class="field-row">
+        <div class="field full">
+          <label for="email">Email</label>
+          <input id="email" name="email" type="email" required value="{{ form.email }}">
+        </div>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Shipping Address</legend>
+      <div class="field-row">
+        <div class="field">
+          <label for="fn">First name</label>
+          <input id="fn" name="first_name" type="text" required value="{{ form.first_name }}">
+        </div>
+        <div class="field">
+          <label for="ln">Last name</label>
+          <input id="ln" name="last_name" type="text" required value="{{ form.last_name }}">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field full">
+          <label for="addr">Address</label>
+          <input id="addr" name="address" type="text" required value="{{ form.address }}">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="city">City</label>
+          <input id="city" name="city" type="text" required value="{{ form.city }}">
+        </div>
+        <div class="field">
+          <label for="country">Country</label>
+          <select id="country" name="country" required>
+            {% for country in countries %}
+            <option value="{{ country }}" {% if form.country == country %}selected{% endif %}>{{ country }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field full">
+          <label for="phone">Phone</label>
+          <input id="phone" name="phone" type="tel" required value="{{ form.phone }}">
+        </div>
+      </div>
+    </fieldset>
+
+    <div class="account-edit-actions">
+      <button class="btn btn-primary" type="submit">Save</button>
+      <a href="/account" class="text-link">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  {% if auth_error %}
+  if (window.showStorefrontToast) {
+    window.showStorefrontToast({{ auth_error | tojson }});
+  }
+  {% endif %}
+})();
+</script>
+{% endblock %}

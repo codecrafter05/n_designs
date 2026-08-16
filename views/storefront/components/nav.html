@@ -20,9 +20,10 @@
     <button class="icon-btn" aria-label="Search">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
     </button>
-    <button class="icon-btn" aria-label="Account">
+    <a class="icon-btn" href="{{ '/account' if current_customer else '/login' }}"
+       aria-label="{{ 'Account' if current_customer else 'Login' }}">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.6-4 5-6 8-6s6.4 2 8 6"/></svg>
-    </button>
+    </a>
     <a class="icon-btn cart-btn" href="/cart" id="navCart" aria-label="Bag">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 8h12l-1 12H7L6 8z"/><path d="M9 8V6a3 3 0 016 0v2"/></svg>
       <span class="cart-badge" id="cartBadge" {% if not cart_count %}hidden{% endif %}>{{ cart_count }}</span>
@@ -46,5 +47,11 @@
     <a href="/collections">Collections</a>
     <a href="/sale">Sale</a>
     <a href="/about">About</a>
+    {% if current_customer %}
+    <a href="/account">Account</a>
+    {% else %}
+    <a href="/login">Login</a>
+    <a href="/register">Register</a>
+    {% endif %}
   </nav>
 </aside>
