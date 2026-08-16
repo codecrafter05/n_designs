@@ -320,13 +320,7 @@ def _form_context(
 
 def _summarize(product: Product) -> dict:
     variants = [variant for color in product.colors for variant in color.variants]
-    prices = [Decimal(str(variant.price)) for variant in variants]
-    if not prices:
-        price_label = "—"
-    elif min(prices) == max(prices):
-        price_label = f"{min(prices):.3f}"
-    else:
-        price_label = f"{min(prices):.3f} – {max(prices):.3f}"
+    price_label = f"{Decimal(str(variants[0].price)):.3f}" if variants else "—"
     category = product.category
     parent = category.parent if category else None
     if category and parent:
