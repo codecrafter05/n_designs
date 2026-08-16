@@ -115,18 +115,10 @@ h1,h2,h3{font-family:var(--serif);font-weight:400;margin:0;letter-spacing:-.01em
   position:relative;height:100svh;min-height:620px;
   display:flex;align-items:flex-end;
   overflow:hidden;
-  background:var(--ink);
 }
 .hero-image{
   position:absolute;inset:0;width:100%;height:100%;
-  background:
-    radial-gradient(120% 90% at 20% 15%, rgba(156,124,75,.28), transparent 55%),
-    linear-gradient(155deg,#211f1a 0%, #14130f 46%, #0c0b09 100%);
-}
-.hero-image::before{
-  content:"";position:absolute;inset:0;
-  background-image:repeating-linear-gradient(115deg, rgba(243,239,227,.05) 0 2px, transparent 2px 140px);
-  mix-blend-mode:overlay;
+  background:url("/static/img/Product/WOMEN_CRUISE27_SHOW_ NG_PORTRAIT_SOCIAL__NG3_040_R1_LVCOM_2048x1152_D13.jpg") center/cover no-repeat;
 }
 .hero-mark{
   position:absolute;right:6%;top:50%;transform:translateY(-50%);
