@@ -17,6 +17,8 @@
 .prods-empty{
   grid-column:1/-1;padding:72px 16px;text-align:center;color:var(--ink-70);font-size:15px;
 }
+.prods-empty .text-link{display:inline-flex;margin-top:18px;}
+.sale-page{padding-bottom:100px;}
 .prods-layout{display:grid;grid-template-columns:220px 1fr;gap:48px;padding-bottom:100px;}
 .filters h4{
   font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-70);

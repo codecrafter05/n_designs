@@ -128,6 +128,26 @@
 </section>
 {% endif %}
 
+{% if sale_preview %}
+<section class="section" id="sale">
+  <div class="wrap">
+    <div class="section-head">
+      <div>
+        <span class="eyebrow">Limited Time</span>
+        <h2 class="section-title">On Sale Now</h2>
+      </div>
+      <a href="/sale" class="text-link">View all →</a>
+    </div>
+
+    <div class="prod-grid">
+      {% for card in sale_preview %}
+      {% include "storefront/components/product_card.html" %}
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
 <section class="band">
   <div class="wrap band-inner">
     <h3 class="band-title">Join the list for early access to new collections.</h3>

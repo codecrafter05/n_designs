@@ -124,6 +124,7 @@ def collections_grouped(db: Session) -> list[tuple[Category, list[Category]]]:
 
 _TONES = ("a", "b", "c", "d")
 NEW_ARRIVALS_LIMIT = 8
+HOMEPAGE_SALE_LIMIT = 4
 
 
 def _fmt_bhd(amount) -> str:
@@ -197,6 +198,43 @@ def _product_card(product: Product, index: int = 0) -> dict:
         "tone": _TONES[index % 4],
         "min_payable": min(payables) if payables else Decimal("0"),
     }
+
+
+def _sale_products(db: Session, *, limit: int | None = None, random: bool = False) -> list[Product]:
+    """Active products with at least one discounted variant. One EXISTS query, no N+1."""
+    on_sale = exists().where(
+        ProductColor.product_id == Product.id,
+        ProductVariant.product_color_id == ProductColor.id,
+        ProductVariant.compare_at_price.isnot(None),
+        ProductVariant.compare_at_price < ProductVariant.price,
+    )
+    query = _product_query(db).filter(Product.is_active.is_(True), on_sale)
+    if random:
+        query = query.order_by(func.rand())
+    else:
+        query = query.order_by(Product.created_at.desc(), Product.id.desc())
+    if limit is not None:
+        query = query.limit(limit)
+    return query.all()
+
+
+def _sale_card(product: Product, index: int = 0) -> dict:
+    """Card prices use the deepest sale: lowest compare_at_price and that variant's regular price."""
+    card = _product_card(product, index)
+    sale_variants = [
+        variant
+        for color in product.colors
+        for variant in color.variants
+        if _is_on_sale(variant)
+    ]
+    if not sale_variants:
+        return card
+    best = min(sale_variants, key=lambda variant: Decimal(str(variant.compare_at_price)))
+    card["price_label"] = _fmt_bhd(best.compare_at_price)
+    card["was_label"] = _fmt_bhd(best.price)
+    card["on_sale"] = True
+    card["min_payable"] = Decimal(str(best.compare_at_price))
+    return card
 
 
 def _pdp_payload(product: Product) -> str:
@@ -275,12 +313,29 @@ def storefront_home(request: Request, db: Session = Depends(get_db)):
         spotlight_subcategories=spotlight_subcategories,
         featured_pieces=[_product_card(product, i) for i, product in enumerate(featured)],
         new_arrivals=[_product_card(product, i) for i, product in enumerate(products)],
+        sale_preview=[
+            _sale_card(product, i)
+            for i, product in enumerate(
+                _sale_products(db, limit=HOMEPAGE_SALE_LIMIT, random=True)
+            )
+        ],
     )
 
 
 @router.get("/about", response_class=HTMLResponse, include_in_schema=False)
 def storefront_about(request: Request, db: Session = Depends(get_db)):
     return _storefront_page(request, "storefront/about.html", db=db)
+
+
+@router.get("/sale", response_class=HTMLResponse, include_in_schema=False)
+def storefront_sale(request: Request, db: Session = Depends(get_db)):
+    products = _sale_products(db)
+    return _storefront_page(
+        request,
+        "storefront/sale.html",
+        db=db,
+        cards=[_sale_card(product, i) for i, product in enumerate(products)],
+    )
 
 
 @router.get("/collections", response_class=HTMLResponse, include_in_schema=False)
