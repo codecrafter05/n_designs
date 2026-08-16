@@ -93,7 +93,7 @@ def _parse_parent_id(raw: str | None) -> int | None:
     return int(raw)
 
 
-@router.get("/admin/dashboard/categories", response_class=HTMLResponse, include_in_schema=False)
+@router.get("/admin/categories", response_class=HTMLResponse, include_in_schema=False)
 def categories_list(request: Request, db: Session = Depends(get_db)):
     categories = (
         db.query(Category)
@@ -113,7 +113,7 @@ def categories_list(request: Request, db: Session = Depends(get_db)):
     )
 
 
-@router.get("/admin/dashboard/categories/new", response_class=HTMLResponse, include_in_schema=False)
+@router.get("/admin/categories/new", response_class=HTMLResponse, include_in_schema=False)
 def categories_new(request: Request, db: Session = Depends(get_db), parent_id: int | None = None):
     return templates.TemplateResponse(
         "admin/category/form.html",
@@ -127,7 +127,7 @@ def categories_new(request: Request, db: Session = Depends(get_db), parent_id: i
     )
 
 
-@router.post("/admin/dashboard/categories", include_in_schema=False)
+@router.post("/admin/categories", include_in_schema=False)
 async def categories_create(
     name: str = Form(...),
     parent_id: str | None = Form(None),
@@ -136,18 +136,18 @@ async def categories_create(
 ):
     name = name.strip()
     if not name:
-        return _redirect("/admin/dashboard/categories/new", error="Name is required.")
+        return _redirect("/admin/categories/new", error="Name is required.")
     try:
         resolved_parent = _resolve_parent(db, _parse_parent_id(parent_id))
     except (HTTPException, ValueError):
-        return _redirect("/admin/dashboard/categories/new", error="Invalid parent category.")
+        return _redirect("/admin/categories/new", error="Invalid parent category.")
 
     image_url = None
     if image is not None and image.filename:
         try:
             image_url = save_category_image(image)
         except HTTPException as exc:
-            return _redirect("/admin/dashboard/categories/new", error=str(exc.detail))
+            return _redirect("/admin/categories/new", error=str(exc.detail))
 
     category = Category(
         name=name,
@@ -158,18 +158,18 @@ async def categories_create(
     )
     db.add(category)
     db.commit()
-    return _redirect("/admin/dashboard/categories", notice="Category created.")
+    return _redirect("/admin/categories", notice="Category created.")
 
 
 @router.get(
-    "/admin/dashboard/categories/{category_id}/edit",
+    "/admin/categories/{category_id}/edit",
     response_class=HTMLResponse,
     include_in_schema=False,
 )
 def categories_edit(category_id: int, request: Request, db: Session = Depends(get_db)):
     category = db.query(Category).filter(Category.id == category_id).first()
     if category is None:
-        return _redirect("/admin/dashboard/categories", error="Category not found.")
+        return _redirect("/admin/categories", error="Category not found.")
     parents = [p for p in _top_level(db) if p.id != category.id]
     return templates.TemplateResponse(
         "admin/category/form.html",
@@ -183,7 +183,7 @@ def categories_edit(category_id: int, request: Request, db: Session = Depends(ge
     )
 
 
-@router.post("/admin/dashboard/categories/reorder", include_in_schema=False)
+@router.post("/admin/categories/reorder", include_in_schema=False)
 def categories_reorder(
     payload: ReorderPayload,
     db: Session = Depends(get_db),
@@ -213,7 +213,7 @@ def categories_reorder(
     return JSONResponse({"status": "ok"})
 
 
-@router.post("/admin/dashboard/categories/{category_id}", include_in_schema=False)
+@router.post("/admin/categories/{category_id}", include_in_schema=False)
 async def categories_update(
     category_id: int,
     name: str = Form(...),
@@ -223,12 +223,12 @@ async def categories_update(
 ):
     category = db.query(Category).filter(Category.id == category_id).first()
     if category is None:
-        return _redirect("/admin/dashboard/categories", error="Category not found.")
+        return _redirect("/admin/categories", error="Category not found.")
 
     name = name.strip()
     if not name:
         return _redirect(
-            f"/admin/dashboard/categories/{category_id}/edit",
+            f"/admin/categories/{category_id}/edit",
             error="Name is required.",
         )
 
@@ -236,13 +236,13 @@ async def categories_update(
         resolved_parent = _resolve_parent(db, _parse_parent_id(parent_id))
     except (HTTPException, ValueError):
         return _redirect(
-            f"/admin/dashboard/categories/{category_id}/edit",
+            f"/admin/categories/{category_id}/edit",
             error="Invalid parent category.",
         )
 
     if resolved_parent == category.id:
         return _redirect(
-            f"/admin/dashboard/categories/{category_id}/edit",
+            f"/admin/categories/{category_id}/edit",
             error="A category cannot be its own parent.",
         )
 
@@ -252,7 +252,7 @@ async def categories_update(
         )
         if child_count:
             return _redirect(
-                f"/admin/dashboard/categories/{category_id}/edit",
+                f"/admin/categories/{category_id}/edit",
                 error="Move or remove subcategories before nesting this category.",
             )
 
@@ -261,7 +261,7 @@ async def categories_update(
             new_url = save_category_image(image)
         except HTTPException as exc:
             return _redirect(
-                f"/admin/dashboard/categories/{category_id}/edit",
+                f"/admin/categories/{category_id}/edit",
                 error=str(exc.detail),
             )
         delete_category_image(category.image_url)
@@ -274,14 +274,14 @@ async def categories_update(
     category.slug = _unique_slug(db, name, exclude_id=category.id)
     category.parent_id = resolved_parent
     db.commit()
-    return _redirect("/admin/dashboard/categories", notice="Category updated.")
+    return _redirect("/admin/categories", notice="Category updated.")
 
 
-@router.post("/admin/dashboard/categories/{category_id}/delete", include_in_schema=False)
+@router.post("/admin/categories/{category_id}/delete", include_in_schema=False)
 def categories_delete(category_id: int, db: Session = Depends(get_db)):
     category = db.query(Category).filter(Category.id == category_id).first()
     if category is None:
-        return _redirect("/admin/dashboard/categories", error="Category not found.")
+        return _redirect("/admin/categories", error="Category not found.")
 
     n_children = (
         db.query(func.count(Category.id)).filter(Category.parent_id == category.id).scalar() or 0
@@ -296,7 +296,7 @@ def categories_delete(category_id: int, db: Session = Depends(get_db)):
         if n_products:
             parts.append(f"{n_products} product{'s' if n_products != 1 else ''}")
         return _redirect(
-            "/admin/dashboard/categories",
+            "/admin/categories",
             error=f"Can't delete — this category still has {' / '.join(parts)}. Move or remove those first.",
         )
 
@@ -307,9 +307,9 @@ def categories_delete(category_id: int, db: Session = Depends(get_db)):
     except IntegrityError:
         db.rollback()
         return _redirect(
-            "/admin/dashboard/categories",
+            "/admin/categories",
             error="Can't delete — this category still has related records. Move or remove those first.",
         )
 
     delete_category_image(image_url)
-    return _redirect("/admin/dashboard/categories", notice="Category deleted.")
+    return _redirect("/admin/categories", notice="Category deleted.")

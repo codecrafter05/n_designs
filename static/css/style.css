@@ -292,14 +292,16 @@ h1,h2,h3{font-family:var(--serif);font-weight:400;margin:0;letter-spacing:-.01em
 .footer-wordmark{
   position:relative;width:100%;
   border-top:1px solid rgba(243,239,227,.12);
-  padding:0;
+  padding:18px var(--gutter) 8px;
+  display:flex;justify-content:center;align-items:center;
+  text-align:center;
 }
 .footer-wordmark .scroll{
   font-family:var(--serif);font-weight:300;font-style:italic;
-  font-size:clamp(90px,17vw,240px);white-space:nowrap;color:transparent;
+  font-size:clamp(56px,12vw,160px);white-space:nowrap;color:transparent;
   -webkit-text-stroke:1px rgba(243,239,227,.5);
-  line-height:1;padding:18px 0 0;letter-spacing:-.01em;
-  transform:translateX(-2%);
+  line-height:1;letter-spacing:-.01em;
+  margin:0;
 }
 .footer-bottom{
   display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;

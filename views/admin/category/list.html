@@ -17,7 +17,7 @@
 
   <div class="cat-toolbar mb-3">
     <h4 class="fw-bold mb-0">Categories</h4>
-    <a href="/admin/dashboard/categories/new" class="btn btn-admin-primary">Add Category</a>
+    <a href="/admin/categories/new" class="btn btn-admin-primary">Add Category</a>
   </div>
 
   {% if not categories %}
@@ -26,7 +26,7 @@
       <span class="material-icons-outlined text-secondary" style="font-size:48px;">category</span>
       <h4 class="fw-bold mt-3 mb-2">No categories yet</h4>
       <p class="mb-3 text-secondary">Add your first one to start organizing the catalog.</p>
-      <a href="/admin/dashboard/categories/new" class="btn btn-admin-primary">Add Category</a>
+      <a href="/admin/categories/new" class="btn btn-admin-primary">Add Category</a>
     </div>
   </div>
   {% else %}
@@ -43,8 +43,8 @@
           {% endif %}
           <p class="cat-name">{{ cat.name }}</p>
           <div class="cat-actions">
-            <a href="/admin/dashboard/categories/{{ cat.id }}/edit" class="btn btn-sm btn-admin-secondary">Edit</a>
-            <form method="post" action="/admin/dashboard/categories/{{ cat.id }}/delete" class="d-inline"
+            <a href="/admin/categories/{{ cat.id }}/edit" class="btn btn-sm btn-admin-secondary">Edit</a>
+            <form method="post" action="/admin/categories/{{ cat.id }}/delete" class="d-inline"
                   data-confirm
                   data-confirm-title="Delete category"
                   data-confirm-message="Delete this category? This cannot be undone."
@@ -68,8 +68,8 @@
                   {% endif %}
                   <p class="cat-name">{{ sub.name }}</p>
                   <div class="cat-actions">
-                    <a href="/admin/dashboard/categories/{{ sub.id }}/edit" class="btn btn-sm btn-admin-secondary">Edit</a>
-                    <form method="post" action="/admin/dashboard/categories/{{ sub.id }}/delete" class="d-inline"
+                    <a href="/admin/categories/{{ sub.id }}/edit" class="btn btn-sm btn-admin-secondary">Edit</a>
+                    <form method="post" action="/admin/categories/{{ sub.id }}/delete" class="d-inline"
                           data-confirm
                           data-confirm-title="Delete subcategory"
                           data-confirm-message="Delete this subcategory? This cannot be undone."
@@ -82,7 +82,7 @@
             </div>
             {% endfor %}
           </div>
-          <a href="/admin/dashboard/categories/new?parent_id={{ cat.id }}" class="btn btn-sm btn-admin-primary mt-2">Add Subcategory</a>
+          <a href="/admin/categories/new?parent_id={{ cat.id }}" class="btn btn-sm btn-admin-primary mt-2">Add Subcategory</a>
         </div>
       </div>
     </div>
@@ -111,7 +111,7 @@
           return parseInt(node.getAttribute('data-id'), 10);
         }).filter(Boolean);
         const previous = evt.from;
-        fetch('/admin/dashboard/categories/reorder', {
+        fetch('/admin/categories/reorder', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

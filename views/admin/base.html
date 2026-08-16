@@ -51,8 +51,22 @@
   <script src="/assets/js/main.js"></script>
 
   <script>
-    // Force MetisMenu init
-    $(function () { $('#sidenav').metisMenu(); });
+    // Force MetisMenu init + mark the current section
+    $(function () {
+      $('#sidenav').metisMenu();
+      var path = window.location.pathname;
+      document.querySelectorAll('#sidenav a[href]').forEach(function (a) {
+        var href = a.getAttribute('href');
+        if (!href || href.indexOf('/admin') !== 0) return;
+        var match = href === '/admin/dashboard'
+          ? path === '/admin/dashboard'
+          : path === href || path.indexOf(href + '/') === 0;
+        if (match) {
+          var li = a.closest('li');
+          if (li) li.classList.add('mm-active');
+        }
+      });
+    });
 
     // Auth guard
     (function () {
