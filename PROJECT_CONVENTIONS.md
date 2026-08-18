@@ -28,6 +28,10 @@ Admin section pages live directly under `/admin/{section}`, not `/admin/dashboar
 
 Examples: `/admin/categories`, `/admin/categories/new`, `/admin/products`, `/admin/orders`, `/admin/discount-codes`, `/admin/customers`, `/admin/settings`. Login stays `/admin/login`.
 
+## Customers admin
+
+The customers screen is **read-only**. There is no create, edit, or delete — rows come from storefront registration or checkout. Guest vs Registered is whether `hashed_password` is set. Order counts are a single aggregated query; the count links to `/admin/orders?customer_id={id}`.
+
 ## Discount codes
 
 Codes are stored uppercase; `summer20` and `SUMMER20` are the same code. There is **no delete** — deactivate (`Active` off) to retire a code, same reasoning as Orders. `times_used` is incremented inside the order-creation transaction (row locked with `FOR UPDATE`) so a failed checkout never counts and two concurrent checkouts cannot both consume the last remaining use.

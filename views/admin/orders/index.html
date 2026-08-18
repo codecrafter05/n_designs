@@ -17,24 +17,40 @@
 
   <div class="cat-toolbar mb-3">
     <h4 class="fw-bold mb-0">Orders</h4>
-    <span class="text-secondary">{{ filtered_count }} order{{ 's' if filtered_count != 1 else '' }}</span>
+    <div class="d-flex align-items-center gap-3">
+      <span class="text-secondary">
+        {{ filtered_count }} order{{ 's' if filtered_count != 1 else '' }}{% if customer %} for {{ customer.name }}{% endif %}
+      </span>
+      {% if customer %}
+      <a href="/admin/orders" class="btn btn-sm btn-admin-secondary">View all</a>
+      {% endif %}
+    </div>
   </div>
 
   <div class="product-count d-flex align-items-center gap-3 gap-lg-4 mb-4 fw-medium flex-wrap font-text1">
-    {% for key, label, count in filters %}
-    <a href="{{ '/admin/orders' if key == 'all' else '/admin/orders?status=' ~ key }}"
+    {% for key, label, count, href in filters %}
+    <a href="{{ href }}"
        class="{{ 'fw-bold' if (key == 'all' and not status_filter) or key == status_filter else '' }}">
       <span class="me-1">{{ label }}</span><span class="text-secondary">({{ count }})</span>
     </a>
     {% endfor %}
   </div>
 
-  {% if not rows and total_count == 0 %}
+  {% if not rows and total_count == 0 and not customer %}
   <div class="card rounded-4">
     <div class="card-body text-center py-5">
       <span class="material-icons-outlined text-secondary" style="font-size:48px;">receipt_long</span>
       <h4 class="fw-bold mt-3 mb-2">No orders yet</h4>
       <p class="mb-0 text-secondary">Orders placed on the storefront will show up here.</p>
+    </div>
+  </div>
+  {% elif not rows and total_count == 0 and customer %}
+  <div class="card rounded-4">
+    <div class="card-body text-center py-5">
+      <span class="material-icons-outlined text-secondary" style="font-size:48px;">receipt_long</span>
+      <h4 class="fw-bold mt-3 mb-2">No orders yet</h4>
+      <p class="mb-3 text-secondary">{{ customer.name }} has not placed an order.</p>
+      <a href="/admin/orders" class="btn btn-admin-secondary">View all</a>
     </div>
   </div>
   {% elif not rows %}
@@ -43,7 +59,7 @@
       <span class="material-icons-outlined text-secondary" style="font-size:48px;">filter_list_off</span>
       <h4 class="fw-bold mt-3 mb-2">No orders match this filter</h4>
       <p class="mb-3 text-secondary">Try another status, or view all orders.</p>
-      <a href="/admin/orders" class="btn btn-admin-secondary">View all</a>
+      <a href="{{ '/admin/orders?customer_id=' ~ customer.id if customer else '/admin/orders' }}" class="btn btn-admin-secondary">View all</a>
     </div>
   </div>
   {% else %}

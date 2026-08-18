@@ -18,6 +18,7 @@ from app.core.customer_auth import get_current_customer
 from app.core.database import SessionLocal
 from app.api.v1.endpoints.account import router as account_router
 from app.api.v1.endpoints.admin_categories import router as admin_categories_router
+from app.api.v1.endpoints.admin_customers import router as admin_customers_router
 from app.api.v1.endpoints.admin_discount_codes import router as admin_discount_codes_router
 from app.api.v1.endpoints.admin_orders import router as admin_orders_router
 from app.api.v1.endpoints.admin_products import router as admin_products_router
@@ -51,6 +52,7 @@ app.include_router(router)
 app.include_router(admin_categories_router)
 app.include_router(admin_products_router)
 app.include_router(admin_orders_router)
+app.include_router(admin_customers_router)
 app.include_router(admin_discount_codes_router)
 app.include_router(cart_router)
 app.include_router(account_router)

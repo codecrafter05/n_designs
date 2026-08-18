@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session, selectinload
 from app.api.v1.endpoints.web import _fmt_bhd
 from app.core.database import get_db
 from app.core.orders import SHIPPING_BHD, order_number
+from app.models.customer import Customer
 from app.models.order import Order, OrderItem
 from app.models.product import Product, ProductColor, ProductVariant
 
@@ -86,36 +87,72 @@ def _list_row(order: Order) -> dict:
     }
 
 
+def _orders_href(*, customer_id: int | None = None, status: str | None = None) -> str:
+    params: dict[str, str] = {}
+    if customer_id is not None:
+        params["customer_id"] = str(customer_id)
+    if status:
+        params["status"] = status
+    qs = urlencode(params)
+    return f"/admin/orders?{qs}" if qs else "/admin/orders"
+
+
 @router.get("/admin/orders", response_class=HTMLResponse, include_in_schema=False)
-def orders_list(request: Request, db: Session = Depends(get_db), status: str | None = None):
+def orders_list(
+    request: Request,
+    db: Session = Depends(get_db),
+    status: str | None = None,
+    customer_id: int | None = None,
+):
     status_filter = (status or "").strip().lower()
     if status_filter and status_filter not in STATUS_FILTERS:
         return _redirect("/admin/orders", error="Unknown status filter.")
 
+    customer = None
+    if customer_id is not None:
+        customer = db.query(Customer).filter(Customer.id == customer_id).first()
+        if customer is None:
+            return _redirect("/admin/orders", error="Customer not found.")
+
+    count_query = db.query(Order.status, func.count(Order.id))
+    if customer is not None:
+        count_query = count_query.filter(Order.customer_id == customer.id)
     counts = {key: 0 for key in STATUS_FILTERS}
-    for value, n in (
-        db.query(Order.status, func.count(Order.id)).group_by(Order.status).all()
-    ):
+    for value, n in count_query.group_by(Order.status).all():
         if value in counts:
             counts[value] = n
     total_count = sum(counts.values())
 
     query = db.query(Order).options(selectinload(Order.customer))
+    if customer is not None:
+        query = query.filter(Order.customer_id == customer.id)
     if status_filter:
         query = query.filter(Order.status == status_filter)
     orders = query.order_by(Order.created_at.desc(), Order.id.desc()).all()
 
+    cid = customer.id if customer is not None else None
     return templates.TemplateResponse(
         "admin/orders/index.html",
         {
             "request": request,
             "rows": [_list_row(order) for order in orders],
             "status_filter": status_filter,
+            "customer": customer,
             "total_count": total_count,
             "filtered_count": len(orders),
             "counts": counts,
-            "filters": [("all", "All", total_count)]
-            + [(key, STATUS_LABELS[key], counts[key]) for key in STATUS_FILTERS],
+            "filters": [
+                ("all", "All", total_count, _orders_href(customer_id=cid))
+            ]
+            + [
+                (
+                    key,
+                    STATUS_LABELS[key],
+                    counts[key],
+                    _orders_href(customer_id=cid, status=key),
+                )
+                for key in STATUS_FILTERS
+            ],
         },
     )
 

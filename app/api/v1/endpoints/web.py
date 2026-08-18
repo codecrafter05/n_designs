@@ -964,11 +964,6 @@ def _section_page(request: Request, template: str, page_title: str):
     )
 
 
-@router.get("/admin/customers", response_class=HTMLResponse, include_in_schema=False)
-def customers_page(request: Request):
-    return _section_page(request, "admin/customers/index.html", "Customers")
-
-
 @router.get("/admin/settings", response_class=HTMLResponse, include_in_schema=False)
 def settings_page(request: Request):
     return _section_page(request, "admin/settings/index.html", "Settings")
