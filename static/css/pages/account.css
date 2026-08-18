@@ -1,4 +1,6 @@
-.auth-page,.account-page{max-width:440px;padding:36px 0 110px;}
+.auth-page{max-width:440px;padding:36px 0 110px;}
+.account-page{max-width:720px;padding:36px 0 110px;}
+.auth-optional{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-45);margin-left:6px;}
 .auth-page h1,.account-page h1{font-size:clamp(28px,3.4vw,42px);margin-bottom:10px;}
 .auth-lead{color:var(--ink-70);font-size:14.5px;line-height:1.7;margin-bottom:28px;}
 .auth-page .field{display:flex;flex-direction:column;gap:6px;margin-bottom:16px;}
@@ -23,3 +25,25 @@
 .account-facts dd{margin:0;font-size:14.5px;}
 .account-edit-form{max-width:640px;padding:8px 0 110px;}
 .account-edit-actions{display:flex;align-items:center;gap:22px;margin-top:8px;}
+.account-orders{margin:0 0 36px;}
+.account-orders h2{font-size:12px;letter-spacing:.14em;text-transform:uppercase;margin:0 0 16px;}
+.account-order{
+  display:grid;grid-template-columns:1fr auto auto auto;gap:16px;align-items:center;
+  padding:18px 0;border-bottom:1px solid var(--line);
+}
+.account-order:first-of-type{border-top:1px solid var(--line);}
+.account-order .n{font-weight:600;}
+.account-order .d{font-size:13px;color:var(--ink-45);}
+.account-empty{color:var(--ink-70);font-size:14.5px;}
+.account-empty a{border-bottom:1px solid var(--ink-45);}
+.sf-badge{
+  display:inline-block;padding:3px 8px;font-size:10px;letter-spacing:.12em;
+  text-transform:uppercase;font-weight:600;
+}
+.sf-badge-neutral{background:var(--paper-2);color:var(--ink-70);border:1px solid var(--line);}
+.sf-badge-progress{background:rgba(156,124,75,.12);color:var(--bronze);border:1px solid rgba(156,124,75,.35);}
+.sf-badge-done{background:var(--paper-2);color:var(--stone-dark);border:1px solid var(--stone);}
+.sf-badge-cancel{color:#7a3b32;background:rgba(122,59,50,.06);border:1px solid rgba(122,59,50,.22);}
+@media (max-width:700px){
+  .account-order{grid-template-columns:1fr 1fr;gap:8px 16px;}
+}

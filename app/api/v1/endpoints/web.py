@@ -4,15 +4,16 @@ from decimal import Decimal
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import exists, func, select
 from sqlalchemy.orm import Session, aliased, selectinload
 
 from app.core.cart import get_or_create_cart, reload_cart, set_cart_cookie
 from app.core.config import settings
-from app.core.customer_auth import get_current_customer
+from app.core.customer_auth import create_customer_session, get_current_customer
 from app.core.database import get_db
+from app.core.security import hash_password
 from app.core.orders import SHIPPING_BHD, order_number
 from app.models.cart import Cart
 from app.models.category import Category
@@ -525,6 +526,15 @@ def storefront_cart(request: Request, db: Session = Depends(get_db)):
     )
 
 
+def _split_name(full: str) -> tuple[str, str]:
+    parts = (full or "").strip().split(None, 1)
+    if not parts:
+        return "", ""
+    if len(parts) == 1:
+        return parts[0], ""
+    return parts[0], parts[1]
+
+
 def _checkout_form(data: dict | None = None) -> dict:
     data = data or {}
     return {
@@ -538,17 +548,45 @@ def _checkout_form(data: dict | None = None) -> dict:
     }
 
 
+def _form_from_customer(customer: Customer) -> dict:
+    first, last = _split_name(customer.name)
+    return _checkout_form(
+        {
+            "email": customer.email or "",
+            "first_name": first,
+            "last_name": last,
+            "address": customer.address or "",
+            "city": customer.city or "",
+            "country": customer.country or "Bahrain",
+            "phone": customer.phone or "",
+        }
+    )
+
+
+def _apply_checkout_profile(customer: Customer, form: dict) -> None:
+    customer.name = f"{form['first_name']} {form['last_name']}".strip()
+    customer.email = form["email"].lower()
+    customer.phone = form["phone"]
+    customer.address = form["address"]
+    customer.city = form["city"]
+    customer.country = form["country"]
+
+
 def _checkout_page(
     request: Request,
     db: Session,
     *,
     form: dict | None = None,
     error: str | None = None,
+    create_account: bool = False,
 ):
     cart, _, _ = get_or_create_cart(db, request)
     lines, subtotal = _cart_lines(cart)
     if not lines:
         return RedirectResponse(url="/cart", status_code=303)
+    customer = get_current_customer(request, db)
+    if form is None and customer is not None:
+        form = _form_from_customer(customer)
     shipping = SHIPPING_BHD
     total = subtotal + shipping
     return _storefront_page(
@@ -562,6 +600,8 @@ def _checkout_page(
         countries=COUNTRIES,
         form=_checkout_form(form),
         checkout_error=error,
+        logged_in=customer is not None,
+        create_account=create_account,
     )
 
 
@@ -585,6 +625,19 @@ def _cart_problems(cart) -> list[str]:
     return problems
 
 
+@router.get("/checkout/check-email", include_in_schema=False)
+def checkout_check_email(email: str = "", db: Session = Depends(get_db)):
+    email_key = email.strip().lower()
+    if not email_key or "@" not in email_key:
+        return JSONResponse({"exists": False})
+    row = (
+        db.query(Customer)
+        .filter(func.lower(Customer.email) == email_key, Customer.hashed_password.isnot(None))
+        .first()
+    )
+    return JSONResponse({"exists": row is not None})
+
+
 @router.get("/checkout", response_class=HTMLResponse, include_in_schema=False)
 def storefront_checkout(request: Request, db: Session = Depends(get_db)):
     return _checkout_page(request, db)
@@ -602,6 +655,8 @@ def storefront_checkout_submit(
     country: str = Form(""),
     phone: str = Form(""),
     payment_method: str = Form("cod"),
+    create_account: str = Form(""),
+    account_password: str = Form(""),
 ):
     form = _checkout_form(
         {
@@ -614,6 +669,18 @@ def storefront_checkout_submit(
             "phone": phone,
         }
     )
+    logged_in = get_current_customer(request, db)
+    want_account = create_account == "1" and logged_in is None
+
+    def fail(message: str):
+        return _checkout_page(
+            request,
+            db,
+            form=form,
+            error=message,
+            create_account=want_account,
+        )
+
     missing = [
         label
         for key, label in (
@@ -628,27 +695,21 @@ def storefront_checkout_submit(
         if not form[key]
     ]
     if missing:
-        return _checkout_page(
-            request,
-            db,
-            form=form,
-            error="Please fill in: " + ", ".join(missing) + ".",
-        )
+        return fail("Please fill in: " + ", ".join(missing) + ".")
     if "@" not in form["email"]:
-        return _checkout_page(request, db, form=form, error="Please enter a valid email.")
+        return fail("Please enter a valid email.")
     if payment_method != "cod":
-        return _checkout_page(
-            request,
-            db,
-            form=form,
-            error="Cash on Delivery is the only payment method available right now.",
-        )
+        return fail("Cash on Delivery is the only payment method available right now.")
+    if want_account and len(account_password) < 8:
+        return fail("Password must be at least 8 characters.")
 
     cart, _, _ = get_or_create_cart(db, request)
     lines, subtotal = _cart_lines(cart)
     if not lines:
         return RedirectResponse(url="/cart", status_code=303)
 
+    login_after = False
+    customer = None
     try:
         locked = (
             db.query(Cart)
@@ -677,45 +738,66 @@ def storefront_checkout_submit(
         problems = _cart_problems(cart)
         if problems:
             db.rollback()
-            return _checkout_page(
-                request,
-                db,
-                form=form,
-                error=" ".join(problems) + " Update your bag and try again.",
-            )
+            return fail(" ".join(problems) + " Update your bag and try again.")
 
         lines, subtotal = _cart_lines(cart)
         shipping = SHIPPING_BHD
         total = subtotal + shipping
         email_key = form["email"].lower()
-        customer = (
-            db.query(Customer).filter(func.lower(Customer.email) == email_key).first()
-        )
-        full_name = f"{form['first_name']} {form['last_name']}".strip()
-        if customer:
-            customer.name = full_name
-            customer.email = email_key
-            customer.phone = form["phone"]
-            customer.address = form["address"]
-            customer.city = form["city"]
-            customer.country = form["country"]
-        else:
-            customer = Customer(
-                name=full_name,
-                email=email_key,
-                phone=form["phone"],
-                address=form["address"],
-                city=form["city"],
-                country=form["country"],
+        form["email"] = email_key
+
+        if logged_in is not None:
+            customer = (
+                db.query(Customer).filter(Customer.id == logged_in.id).first()
             )
-            db.add(customer)
-            db.flush()
+            if customer is None:
+                db.rollback()
+                return fail("Something went wrong, please try again.")
+            other = (
+                db.query(Customer)
+                .filter(func.lower(Customer.email) == email_key, Customer.id != customer.id)
+                .first()
+            )
+            if other is not None:
+                db.rollback()
+                return fail("This email is already in use")
+            _apply_checkout_profile(customer, form)
+        else:
+            existing = (
+                db.query(Customer).filter(func.lower(Customer.email) == email_key).first()
+            )
+            if existing is not None and existing.hashed_password:
+                if want_account:
+                    db.rollback()
+                    return fail(
+                        "An account with this email already exists — log in instead"
+                    )
+                customer = None
+            elif existing is not None:
+                customer = existing
+                _apply_checkout_profile(customer, form)
+                if want_account:
+                    customer.hashed_password = hash_password(account_password)
+                    login_after = True
+            else:
+                customer = Customer(
+                    name=f"{form['first_name']} {form['last_name']}".strip(),
+                    email=email_key,
+                    phone=form["phone"],
+                    address=form["address"],
+                    city=form["city"],
+                    country=form["country"],
+                    hashed_password=hash_password(account_password) if want_account else None,
+                )
+                db.add(customer)
+                db.flush()
+                login_after = want_account
 
         shipping_address = (
             f"{form['address']}, {form['city']}, {form['country']}"
         )
         order = Order(
-            customer_id=customer.id,
+            customer_id=customer.id if customer is not None else None,
             status="pending",
             total=total,
             shipping_address=shipping_address,
@@ -742,14 +824,12 @@ def storefront_checkout_submit(
         db.commit()
     except Exception:
         db.rollback()
-        return _checkout_page(
-            request,
-            db,
-            form=form,
-            error="Something went wrong, please try again.",
-        )
+        return fail("Something went wrong, please try again.")
 
-    return RedirectResponse(url=f"/order-confirmation/{order.id}", status_code=303)
+    response = RedirectResponse(url=f"/order-confirmation/{order.id}", status_code=303)
+    if login_after and customer is not None:
+        create_customer_session(response, db, customer)
+    return response
 
 
 @router.get(

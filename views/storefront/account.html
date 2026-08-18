@@ -26,6 +26,25 @@
     </dl>
     </div>
 
+    <div class="account-orders">
+      <h2>Orders</h2>
+      {% if orders %}
+        {% for order in orders %}
+        <div class="account-order">
+          <div>
+            <div class="n">{{ order.number }}</div>
+            <div class="d">{{ order.date }}</div>
+          </div>
+          <span class="sf-badge {{ order.badge_class }}">{{ order.status_label }}</span>
+          <div>{{ order.total_label }}</div>
+          <a href="/order-confirmation/{{ order.id }}" class="text-link">View</a>
+        </div>
+        {% endfor %}
+      {% else %}
+      <p class="account-empty">You haven't placed an order yet. <a href="/categories">Browse categories</a></p>
+      {% endif %}
+    </div>
+
     <form method="post" action="/logout">
       <button class="btn btn-ghost" type="submit">Log out</button>
     </form>

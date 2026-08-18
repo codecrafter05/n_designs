@@ -21,6 +21,18 @@
             <input id="email" name="email" type="email" required value="{{ form.email }}">
           </div>
         </div>
+        {% if not logged_in %}
+        <label class="create-account">
+          <input type="checkbox" name="create_account" value="1" id="createAccount"
+                 {% if create_account %}checked{% endif %}>
+          Create an account for faster checkout next time
+        </label>
+        <div class="field full create-account-pass" id="createAccountPass" {% if not create_account %}hidden{% endif %}>
+          <label for="account_password">Password</label>
+          <input id="account_password" name="account_password" type="password" minlength="8"
+                 {% if create_account %}required{% endif %}>
+        </div>
+        {% endif %}
       </fieldset>
 
       <fieldset>
@@ -110,6 +122,27 @@
     </aside>
   </form>
 </div>
+
+{% if not logged_in %}
+<div class="modal-overlay" id="emailModal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="emailModalTitle">
+    <div class="modal-head">
+      <div>
+        <h3 class="modal-title" id="emailModalTitle">Account found</h3>
+        <div class="modal-sub">An account already exists with this email</div>
+      </div>
+      <button class="modal-close" type="button" id="emailModalClose" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <p class="modal-copy">Log in to use your saved details, or continue as a guest. A guest order will not be added to that account.</p>
+    <div class="modal-actions">
+      <a class="btn btn-primary" href="/login?next=/checkout">Log In</a>
+      <button class="btn btn-ghost" type="button" id="emailModalGuest">Continue as Guest</button>
+    </div>
+  </div>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block extra_js %}
@@ -134,9 +167,105 @@
 
   var form = document.getElementById('checkoutForm');
   var btn = document.getElementById('placeOrder');
+  var createBox = document.getElementById('createAccount');
+  var passWrap = document.getElementById('createAccountPass');
+  var passInput = document.getElementById('account_password');
+  if (createBox && passWrap && passInput) {
+    createBox.addEventListener('change', function () {
+      passWrap.hidden = !createBox.checked;
+      passInput.required = createBox.checked;
+    });
+  }
+
+  var loggedIn = {{ 'true' if logged_in else 'false' }};
+  var emailInput = document.getElementById('email');
+  var overlay = document.getElementById('emailModal');
+  var guestAck = false;
+  var lastChecked = '';
+  var knownExists = false;
+
+  function openEmailModal() {
+    if (!overlay) return;
+    overlay.classList.add('is-open');
+  }
+  function closeEmailModal() {
+    if (!overlay) return;
+    overlay.classList.remove('is-open');
+  }
+  function emailKey() {
+    return (emailInput && emailInput.value || '').trim().toLowerCase();
+  }
+  function checkAccountEmail(thenSubmit) {
+    var value = emailKey();
+    if (loggedIn || !value || value.indexOf('@') === -1) {
+      if (thenSubmit && form) form.requestSubmit();
+      return;
+    }
+    if (guestAck && value === lastChecked) {
+      if (thenSubmit && form) form.requestSubmit();
+      return;
+    }
+    fetch('/checkout/check-email?email=' + encodeURIComponent(value))
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        lastChecked = value;
+        knownExists = !!(data && data.exists);
+        if (knownExists) {
+          if (btn) {
+            btn.disabled = false;
+            btn.textContent = btn.getAttribute('data-label') || btn.textContent;
+          }
+          openEmailModal();
+        } else if (thenSubmit && form) {
+          guestAck = true;
+          form.requestSubmit();
+        }
+      })
+      .catch(function () {
+        if (thenSubmit && form) form.requestSubmit();
+      });
+  }
+
+  if (emailInput && !loggedIn) {
+    emailInput.addEventListener('blur', function () { checkAccountEmail(false); });
+    emailInput.addEventListener('input', function () {
+      guestAck = false;
+      knownExists = false;
+    });
+  }
+  if (overlay) {
+    var closeBtn = document.getElementById('emailModalClose');
+    var guestBtn = document.getElementById('emailModalGuest');
+    if (closeBtn) closeBtn.addEventListener('click', closeEmailModal);
+    if (guestBtn) guestBtn.addEventListener('click', function () {
+      guestAck = true;
+      lastChecked = emailKey();
+      closeEmailModal();
+    });
+    overlay.addEventListener('click', function (e) {
+      if (e.target === overlay) closeEmailModal();
+    });
+  }
+
   if (form && btn) {
-    form.addEventListener('submit', function () {
+    btn.setAttribute('data-label', btn.textContent);
+    form.addEventListener('submit', function (e) {
       if (!form.checkValidity()) return;
+      if (!loggedIn && !guestAck) {
+        var value = emailKey();
+        if (value && value.indexOf('@') !== -1) {
+          if (knownExists && value === lastChecked) {
+            e.preventDefault();
+            openEmailModal();
+            return;
+          }
+          if (value !== lastChecked) {
+            e.preventDefault();
+            checkAccountEmail(true);
+            return;
+          }
+        }
+      }
       btn.disabled = true;
       btn.textContent = 'Placing order…';
     });

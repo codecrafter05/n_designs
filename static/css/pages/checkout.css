@@ -32,6 +32,30 @@ legend{
   margin-left:auto;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-45);
 }
 .pay-option input{accent-color:var(--ink);}
+.create-account{
+  display:flex;align-items:flex-start;gap:10px;margin-top:16px;font-size:13.5px;cursor:pointer;
+}
+.create-account input{margin-top:3px;accent-color:var(--ink);}
+.create-account-pass{margin-top:14px;}
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(19,18,16,.55);z-index:400;
+  opacity:0;pointer-events:none;transition:opacity .3s var(--ease);
+  display:flex;align-items:center;justify-content:center;padding:24px;
+}
+.modal-overlay.is-open{opacity:1;pointer-events:auto;}
+.modal{
+  background:var(--paper);max-width:480px;width:100%;max-height:82vh;overflow:auto;
+  padding:36px;transform:translateY(14px);transition:transform .35s var(--ease);
+  position:relative;
+}
+.modal-overlay.is-open .modal{transform:translateY(0);}
+.modal-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;}
+.modal-title{font-size:24px;}
+.modal-close{background:none;border:0;padding:6px;color:var(--ink);}
+.modal-close svg{width:18px;height:18px;}
+.modal-sub{font-size:12.5px;color:var(--ink-45);margin-bottom:8px;}
+.modal-copy{font-size:14.5px;color:var(--ink-70);line-height:1.7;margin:12px 0 24px;}
+.modal-actions{display:flex;flex-wrap:wrap;gap:12px;}
 .mini-item img.ph{width:56px;aspect-ratio:4/5;object-fit:cover;flex:none;}
 .confirm-header{padding:28px 0 8px;}
 .confirm-header h1{font-size:clamp(28px,3.4vw,42px);margin-top:8px;}

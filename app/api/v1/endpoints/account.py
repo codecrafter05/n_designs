@@ -5,15 +5,17 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.api.v1.endpoints.web import COUNTRIES, _storefront_page
+from app.api.v1.endpoints.web import COUNTRIES, _fmt_bhd, _storefront_page
 from app.core.customer_auth import (
     create_customer_session,
     destroy_customer_session,
     get_current_customer,
 )
 from app.core.database import get_db
+from app.core.orders import order_number
 from app.core.security import hash_password, verify_password
 from app.models.customer import Customer
+from app.models.order import Order
 
 router = APIRouter(tags=["account"])
 
@@ -47,7 +49,7 @@ def register_get(request: Request, db: Session = Depends(get_db), next: str | No
         request,
         db,
         "storefront/register.html",
-        form={"name": "", "email": ""},
+        form={"name": "", "email": "", "phone": ""},
         next_path=_safe_next(next) if next else "",
         auth_error=None,
     )
@@ -59,11 +61,12 @@ def register_post(
     db: Session = Depends(get_db),
     name: str = Form(""),
     email: str = Form(""),
+    phone: str = Form(""),
     password: str = Form(""),
     confirm_password: str = Form(""),
     next: str = Form(""),
 ):
-    form = {"name": name.strip(), "email": email.strip()}
+    form = {"name": name.strip(), "email": email.strip(), "phone": phone.strip()}
     next_path = _safe_next(next) if next else "/account"
     if get_current_customer(request, db):
         return _redirect(next_path)
@@ -97,13 +100,15 @@ def register_post(
         existing.email = email_key
         existing.name = form["name"]
         existing.hashed_password = hashed
+        if form["phone"]:
+            existing.phone = form["phone"]
         customer = existing
     else:
         customer = Customer(
             name=form["name"],
             email=email_key,
             hashed_password=hashed,
-            phone="",
+            phone=form["phone"],
         )
         db.add(customer)
     db.commit()
@@ -193,6 +198,22 @@ def _profile_form(customer: Customer, data: dict | None = None) -> dict:
     }
 
 
+_ORDER_BADGE = {
+    "pending": "sf-badge-neutral",
+    "processing": "sf-badge-progress",
+    "shipped": "sf-badge-progress",
+    "delivered": "sf-badge-done",
+    "cancelled": "sf-badge-cancel",
+}
+_ORDER_LABEL = {
+    "pending": "Pending",
+    "processing": "Processing",
+    "shipped": "Shipped",
+    "delivered": "Delivered",
+    "cancelled": "Cancelled",
+}
+
+
 def _require_customer(request: Request, db: Session, next_path: str):
     customer = get_current_customer(request, db)
     if customer is None:
@@ -205,11 +226,29 @@ def account_page(request: Request, db: Session = Depends(get_db)):
     customer, denied = _require_customer(request, db, "/account")
     if denied:
         return denied
+    orders = (
+        db.query(Order)
+        .filter(Order.customer_id == customer.id)
+        .order_by(Order.created_at.desc(), Order.id.desc())
+        .all()
+    )
+    order_rows = [
+        {
+            "id": order.id,
+            "number": order_number(order.id),
+            "date": order.created_at.strftime("%d %b %Y") if order.created_at else "—",
+            "status_label": _ORDER_LABEL.get(order.status, order.status.title()),
+            "badge_class": _ORDER_BADGE.get(order.status, "sf-badge-neutral"),
+            "total_label": _fmt_bhd(order.total),
+        }
+        for order in orders
+    ]
     return _storefront_page(
         request,
         "storefront/account.html",
         db=db,
         customer=customer,
+        orders=order_rows,
         notice=request.query_params.get("notice"),
     )
 

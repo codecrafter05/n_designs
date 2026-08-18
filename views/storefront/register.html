@@ -21,6 +21,10 @@
         <input id="email" name="email" type="email" required value="{{ form.email }}">
       </div>
       <div class="field">
+        <label for="phone">Phone <span class="auth-optional">optional</span></label>
+        <input id="phone" name="phone" type="tel" value="{{ form.phone }}">
+      </div>
+      <div class="field">
         <label for="password">Password</label>
         <input id="password" name="password" type="password" required minlength="8">
       </div>
