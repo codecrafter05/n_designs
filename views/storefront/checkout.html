@@ -68,10 +68,9 @@
           </div>
         </div>
         <div class="field-row">
-          <div class="field full">
-            <label for="phone">Phone</label>
-            <input id="phone" name="phone" type="tel" required value="{{ form.phone }}">
-          </div>
+          {% with phone=form.phone, phone_required=true %}
+          {% include "storefront/components/phone_input.html" %}
+          {% endwith %}
         </div>
       </fieldset>
 

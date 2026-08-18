@@ -1,0 +1,18 @@
+<div class="field{% if phone_full_width|default(true) %} full{% endif %}" data-phone-group>
+  <label for="{{ phone_local_id|default('phone_local') }}">
+    Phone{% if phone_optional %} <span class="auth-optional">optional</span>{% endif %}
+  </label>
+  <div class="phone-join">
+    <select class="phone-dial" data-phone-dial aria-label="Dial code">
+      <option value="+973" data-country="Bahrain">🇧🇭 +973</option>
+      <option value="+966" data-country="Saudi Arabia">🇸🇦 +966</option>
+      <option value="+971" data-country="United Arab Emirates">🇦🇪 +971</option>
+      <option value="+965" data-country="Kuwait">🇰🇼 +965</option>
+      <option value="" data-country="Other">Other</option>
+    </select>
+    <input id="{{ phone_local_id|default('phone_local') }}" class="phone-local" type="tel"
+           data-phone-local autocomplete="tel-national"
+           {% if phone_required %}required{% endif %}>
+  </div>
+  <input type="hidden" name="phone" data-phone-full value="{{ phone|default('') }}">
+</div>

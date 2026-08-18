@@ -440,3 +440,17 @@ body.nav-open{overflow:hidden;}
 .btn-ghost{background:transparent;color:var(--ink);}
 .btn-ghost:hover{background:var(--ink);color:var(--on-dark);}
 .btn-block{width:100%;}
+
+.phone-join{
+  display:flex;align-items:stretch;border:1px solid var(--line);background:var(--white);
+}
+.phone-join:focus-within{border-color:var(--ink);}
+.phone-dial{
+  flex:none;min-width:7.6em;border:0;border-right:1px solid var(--line);
+  background:transparent;padding:13px 10px;font:inherit;font-size:13.5px;color:var(--ink);
+  appearance:auto;
+}
+.phone-local{
+  flex:1;min-width:0;border:0;background:transparent;padding:13px 14px;font:inherit;font-size:13.5px;color:var(--ink);
+}
+.phone-dial:focus,.phone-local:focus{outline:none;border-color:transparent;}

@@ -9,6 +9,12 @@
   border:1px solid var(--line);background:var(--white);padding:13px 14px;font:inherit;font-size:13.5px;color:var(--ink);
 }
 .auth-page .field input:focus{border-color:var(--ink);}
+.auth-page .field .phone-join input,
+.auth-page .field .phone-join select{
+  border:0;background:transparent;box-shadow:none;
+}
+.auth-page .field .phone-join input:focus,
+.auth-page .field .phone-join select:focus{border:0;}
 .auth-page .btn{margin-top:8px;}
 .auth-switch{margin-top:22px;font-size:13.5px;color:var(--ink-70);}
 .auth-switch a{border-bottom:1px solid var(--ink-45);}

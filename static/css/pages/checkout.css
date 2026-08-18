@@ -21,6 +21,12 @@ legend{
   border:1px solid var(--line);background:var(--white);padding:13px 14px;font:inherit;font-size:13.5px;color:var(--ink);
 }
 .field input:focus,.field select:focus{border-color:var(--ink);}
+.field .phone-join select,
+.field .phone-join input{
+  border:0;background:transparent;box-shadow:none;
+}
+.field .phone-join select:focus,
+.field .phone-join input:focus{border:0;}
 
 .pay-options{display:grid;gap:10px;}
 .pay-option{
