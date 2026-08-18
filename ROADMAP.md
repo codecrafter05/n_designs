@@ -4,7 +4,7 @@ This file holds future feature ideas that are **not yet decided in detail** and 
 
 ## Known Limitations
 
-- Order confirmation page (`/order-confirmation/{id}`) has no access control — anyone with the URL can view it. Revisit once customer accounts/login exist.
+- Order confirmation (`/order-confirmation/{id}`): orders tied to a customer account require that customer to be logged in. Unauthenticated guest orders (`customer_id` NULL) still have no access control — anyone with the URL can view them.
 
 ## Deferred Features
 

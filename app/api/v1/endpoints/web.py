@@ -1,7 +1,7 @@
 import json
 import os
 from decimal import Decimal
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
@@ -855,6 +855,16 @@ def storefront_order_confirmation(
     )
     if order is None:
         raise HTTPException(status_code=404, detail="Not Found")
+    if order.customer_id is not None:
+        viewer = get_current_customer(request, db)
+        if viewer is None:
+            return RedirectResponse(
+                url="/login?"
+                + urlencode({"next": f"/order-confirmation/{order.id}"}),
+                status_code=303,
+            )
+        if viewer.id != order.customer_id:
+            raise HTTPException(status_code=404, detail="Not Found")
     items = []
     for item in order.items:
         variant = item.variant

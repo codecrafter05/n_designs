@@ -20,7 +20,7 @@ Approved references: Categories list/form (`views/admin/category/`), Maxton `for
 
 ## Checkout (COD MVP)
 
-Checkout is `POST /checkout` in one DB transaction: find-or-create Customer by email, create Order + OrderItems, decrement `ProductVariant.stock_quantity`, then delete `CartItem` rows (the `Cart` row and `cart_session` cookie stay). Shipping is a flat **BHD 3.000** placeholder until real rates exist. Card and BenefitPay radios stay in the markup, disabled, for a later Gate-E/MPGS slot-in. `GET /order-confirmation/{order_id}` has no access control — anyone with the URL can view the order. Revisit once customer accounts exist.
+Checkout is `POST /checkout` in one DB transaction: find-or-create Customer by email, create Order + OrderItems, decrement `ProductVariant.stock_quantity`, then delete `CartItem` rows (the `Cart` row and `cart_session` cookie stay). Shipping is a flat **BHD 3.000** placeholder until real rates exist. Card and BenefitPay radios stay in the markup, disabled, for a later Gate-E/MPGS slot-in. `GET /order-confirmation/{order_id}` requires the owning customer to be logged in when `customer_id` is set; true guest orders (`customer_id` NULL) remain reachable by URL.
 
 ## URL conventions
 

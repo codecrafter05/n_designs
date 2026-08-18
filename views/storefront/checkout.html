@@ -27,9 +27,10 @@
                  {% if create_account %}checked{% endif %}>
           Create an account for faster checkout next time
         </label>
-        <div class="field full create-account-pass" id="createAccountPass" {% if not create_account %}hidden{% endif %}>
+        <div class="field full create-account-pass{% if create_account %} is-open{% endif %}" id="createAccountPass">
           <label for="account_password">Password</label>
           <input id="account_password" name="account_password" type="password" minlength="8"
+                 autocomplete="new-password"
                  {% if create_account %}required{% endif %}>
         </div>
         {% endif %}
@@ -170,10 +171,14 @@
   var passWrap = document.getElementById('createAccountPass');
   var passInput = document.getElementById('account_password');
   if (createBox && passWrap && passInput) {
-    createBox.addEventListener('change', function () {
-      passWrap.hidden = !createBox.checked;
-      passInput.required = createBox.checked;
-    });
+    function syncAccountPass() {
+      var on = createBox.checked;
+      passWrap.classList.toggle('is-open', on);
+      passInput.required = on;
+      if (!on) passInput.value = '';
+    }
+    createBox.addEventListener('change', syncAccountPass);
+    syncAccountPass();
   }
 
   var loggedIn = {{ 'true' if logged_in else 'false' }};

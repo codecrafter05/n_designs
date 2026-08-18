@@ -42,7 +42,8 @@ legend{
   display:flex;align-items:flex-start;gap:10px;margin-top:16px;font-size:13.5px;cursor:pointer;
 }
 .create-account input{margin-top:3px;accent-color:var(--ink);}
-.create-account-pass{margin-top:14px;}
+.create-account-pass{display:none;margin-top:14px;}
+.create-account-pass.is-open{display:flex;}
 .modal-overlay{
   position:fixed;inset:0;background:rgba(19,18,16,.55);z-index:400;
   opacity:0;pointer-events:none;transition:opacity .3s var(--ease);
