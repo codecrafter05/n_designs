@@ -1,6 +1,6 @@
-from urllib.parse import quote_plus
+from pydantic import computed_field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import computed_field
+from urllib.parse import quote_plus
 
 
 class Settings(BaseSettings):
@@ -16,6 +16,22 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 480
     ALGORITHM: str = "HS256"
     WHATSAPP_NUMBER: str = "97300000000"
+
+    MAIL_HOST: str = ""
+    MAIL_PORT: int = 465
+    MAIL_USERNAME: str = ""
+    MAIL_PASSWORD: str = ""
+    MAIL_ENCRYPTION: str = "ssl"
+    MAIL_FROM_ADDRESS: str = ""
+    MAIL_FROM_NAME: str = "N Designs"
+    ADMIN_NOTIFICATION_EMAIL: str = ""
+    SITE_URL: str = "http://127.0.0.1:8000"
+
+    @model_validator(mode="after")
+    def default_admin_notification_email(self):
+        if not (self.ADMIN_NOTIFICATION_EMAIL or "").strip():
+            self.ADMIN_NOTIFICATION_EMAIL = (self.MAIL_FROM_ADDRESS or "").strip()
+        return self
 
     @computed_field  # type: ignore[prop-decorator]
     @property

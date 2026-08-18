@@ -3,7 +3,7 @@ import os
 from decimal import Decimal
 from urllib.parse import quote, urlencode
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import exists, func, select
@@ -19,6 +19,7 @@ from app.core.discounts import (
     discount_amount,
     is_usable,
 )
+from app.core.email import send_order_emails
 from app.core.security import hash_password
 from app.core.orders import SHIPPING_BHD, order_number
 from app.core.pricing import is_on_sale as _is_on_sale, payable as _payable
@@ -319,6 +320,50 @@ def _cart_lines(cart) -> tuple[list[dict], Decimal]:
             }
         )
     return lines, subtotal
+
+
+def _order_email_payload(
+    order: Order,
+    form: dict,
+    lines: list[dict],
+    subtotal,
+    shipping,
+    applied_discount,
+    discount_row,
+    total,
+) -> dict:
+    discount_code = discount_row.code if discount_row is not None else None
+    placed = order.created_at
+    site = (settings.SITE_URL or "").rstrip("/")
+    return {
+        "order_id": order.id,
+        "order_number": order_number(order.id),
+        "order_date": placed.strftime("%d %b %Y") if placed else "",
+        "customer_name": f"{form['first_name']} {form['last_name']}".strip(),
+        "customer_email": form["email"],
+        "customer_phone": form["phone"],
+        "shipping_address": order.shipping_address,
+        "payment_method": order.payment_method,
+        "items": [
+            {
+                "name": line["name"],
+                "color": line["color"],
+                "size": line["size"],
+                "quantity": line["quantity"],
+                "line_label": line["line_label"],
+            }
+            for line in lines
+        ],
+        "subtotal_label": _fmt_bhd(subtotal),
+        "discount_code": discount_code,
+        "discount_amount_label": (
+            _fmt_bhd(applied_discount) if discount_code else None
+        ),
+        "shipping_label": _fmt_bhd(shipping),
+        "total_label": _fmt_bhd(total),
+        "confirmation_url": f"{site}/order-confirmation/{order.id}",
+        "admin_url": f"{site}/admin/orders/{order.id}",
+    }
 
 
 def _promo_vars(cart) -> dict:
@@ -659,6 +704,7 @@ def storefront_checkout(request: Request, db: Session = Depends(get_db)):
 @router.post("/checkout", include_in_schema=False)
 def storefront_checkout_submit(
     request: Request,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     email: str = Form(""),
     first_name: str = Form(""),
@@ -858,7 +904,25 @@ def storefront_checkout_submit(
         db.rollback()
         return fail("Something went wrong, please try again.")
 
+    try:
+        background_tasks.add_task(
+            send_order_emails,
+            _order_email_payload(
+                order,
+                form,
+                lines,
+                subtotal,
+                shipping,
+                applied_discount,
+                discount_row,
+                total,
+            ),
+        )
+    except Exception:
+        pass
+
     response = RedirectResponse(url=f"/order-confirmation/{order.id}", status_code=303)
+    response.background = background_tasks
     if login_after and customer is not None:
         create_customer_session(response, db, customer)
     return response

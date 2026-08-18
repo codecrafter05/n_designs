@@ -20,7 +20,11 @@ Approved references: Categories list/form (`views/admin/category/`), Maxton `for
 
 ## Checkout (COD MVP)
 
-Checkout is `POST /checkout` in one DB transaction: find-or-create Customer by email, create Order + OrderItems, apply a cart-level discount code if still valid (increment `DiscountCode.times_used`), decrement `ProductVariant.stock_quantity`, then delete `CartItem` rows and clear `Cart.discount_code_id` (the `Cart` row and `cart_session` cookie stay). Shipping is a flat **BHD 3.000** placeholder until real rates exist. Card and BenefitPay radios stay in the markup, disabled, for a later Gate-E/MPGS slot-in. `GET /order-confirmation/{order_id}` requires the owning customer to be logged in when `customer_id` is set; true guest orders (`customer_id` NULL) remain reachable by URL.
+Checkout is `POST /checkout` in one DB transaction: find-or-create Customer by email, create Order + OrderItems, apply a cart-level discount code if still valid (increment `DiscountCode.times_used`), decrement `ProductVariant.stock_quantity`, then delete `CartItem` rows and clear `Cart.discount_code_id` (the `Cart` row and `cart_session` cookie stay). After commit, order confirmation and admin new-order emails are queued with FastAPI `BackgroundTasks` — SMTP failure is logged server-side and never rolls back or blocks the order. Shipping is a flat **BHD 3.000** placeholder until real rates exist. Card and BenefitPay radios stay in the markup, disabled, for a later Gate-E/MPGS slot-in. `GET /order-confirmation/{order_id}` requires the owning customer to be logged in when `customer_id` is set; true guest orders (`customer_id` NULL) remain reachable by URL.
+
+## Transactional email
+
+SMTP settings live in `.env` (`MAIL_*`, `ADMIN_NOTIFICATION_EMAIL`, `SITE_URL`). `MAIL_PASSWORD` is never logged. Customer confirmation and admin new-order alerts are sent after checkout commit via `BackgroundTasks`. Templates are inline-styled HTML in `views/emails/` (email clients cannot use the site CSS). Header branding is the “N Designs” wordmark, not an embedded logo.
 
 ## URL conventions
 

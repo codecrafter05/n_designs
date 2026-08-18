@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Order {{ order_number }} — N Designs</title>
+</head>
+<body style="margin:0;padding:0;background:#F7F4EC;color:#131210;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#F7F4EC;">
+    <tr>
+      <td align="center" style="padding:32px 16px;">
+        <table role="presentation" width="560" cellspacing="0" cellpadding="0" border="0" style="width:560px;max-width:100%;background:#F7F4EC;">
+          <tr>
+            <td style="padding:8px 8px 28px;font-family:Georgia,'Times New Roman',serif;font-size:28px;letter-spacing:0.04em;color:#131210;">
+              N Designs
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 8px 8px;font-family:Georgia,'Times New Roman',serif;font-size:26px;color:#131210;">
+              Order confirmed
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 8px 24px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.7;color:#5c5850;">
+              Your order <strong style="color:#131210;">{{ order_number }}</strong> is in
+              ({{ order_date }}). We'll contact you by phone or WhatsApp to confirm delivery.
+              Please have cash ready for the courier.
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 8px 16px;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border-top:1px solid #e4dfd3;">
+                {% for line in items %}
+                <tr>
+                  <td style="padding:14px 0;border-bottom:1px solid #e4dfd3;font-family:Arial,Helvetica,sans-serif;">
+                    <div style="font-size:15px;color:#131210;">{{ line.name }}</div>
+                    <div style="font-size:12px;color:#8a8478;margin-top:4px;">
+                      {{ line.color }} · Size {{ line.size }} · Qty {{ line.quantity }}
+                    </div>
+                  </td>
+                  <td align="right" valign="top" style="padding:14px 0;border-bottom:1px solid #e4dfd3;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#131210;white-space:nowrap;">
+                    {{ line.line_label }}
+                  </td>
+                </tr>
+                {% endfor %}
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:8px;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#5c5850;">
+                <tr>
+                  <td style="padding:6px 0;">Subtotal</td>
+                  <td align="right" style="padding:6px 0;">{{ subtotal_label }}</td>
+                </tr>
+                {% if discount_code %}
+                <tr>
+                  <td style="padding:6px 0;">Discount ({{ discount_code }})</td>
+                  <td align="right" style="padding:6px 0;">− {{ discount_amount_label }}</td>
+                </tr>
+                {% endif %}
+                <tr>
+                  <td style="padding:6px 0;">Shipping</td>
+                  <td align="right" style="padding:6px 0;">{{ shipping_label }}</td>
+                </tr>
+                <tr>
+                  <td style="padding:12px 0 4px;border-top:1px solid #e4dfd3;font-size:16px;color:#131210;"><strong>Total</strong></td>
+                  <td align="right" style="padding:12px 0 4px;border-top:1px solid #e4dfd3;font-size:16px;color:#131210;"><strong>{{ total_label }}</strong></td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:20px 8px 8px;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.7;color:#5c5850;">
+              <div style="font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:#9C7C4B;margin-bottom:8px;">Ship to</div>
+              {{ customer_name }}<br>
+              {{ shipping_address }}<br>
+              {{ customer_phone }}
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:8px;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#5c5850;">
+              <div style="font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:#9C7C4B;margin-bottom:8px;">Payment</div>
+              {{ payment_method }}
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:24px 8px 8px;font-family:Arial,Helvetica,sans-serif;font-size:13px;">
+              <a href="{{ confirmation_url }}" style="color:#9C7C4B;">View your order</a>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:28px 8px 0;font-family:Georgia,'Times New Roman',serif;font-size:13px;color:#8a8478;">
+              N Designs
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

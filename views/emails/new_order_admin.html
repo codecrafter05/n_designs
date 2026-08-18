@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>New order {{ order_number }}</title>
+</head>
+<body style="margin:0;padding:0;background:#F7F4EC;color:#131210;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#F7F4EC;">
+    <tr>
+      <td align="center" style="padding:32px 16px;">
+        <table role="presentation" width="560" cellspacing="0" cellpadding="0" border="0" style="width:560px;max-width:100%;">
+          <tr>
+            <td style="padding:0 8px 6px;font-family:Arial,Helvetica,sans-serif;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#9C7C4B;">
+              New order
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 8px 20px;font-family:Georgia,'Times New Roman',serif;font-size:24px;color:#131210;">
+              {{ order_number }} — {{ total_label }}
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 8px 18px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.7;color:#5c5850;">
+              <strong style="color:#131210;">{{ customer_name }}</strong><br>
+              {{ customer_email }}<br>
+              {{ customer_phone }}
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 8px 16px;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border-top:1px solid #e4dfd3;font-family:Arial,Helvetica,sans-serif;font-size:13px;">
+                {% for line in items %}
+                <tr>
+                  <td style="padding:10px 0;border-bottom:1px solid #e4dfd3;color:#131210;">
+                    {{ line.name }} · {{ line.color }} · {{ line.size }} × {{ line.quantity }}
+                  </td>
+                  <td align="right" style="padding:10px 0;border-bottom:1px solid #e4dfd3;color:#131210;white-space:nowrap;">
+                    {{ line.line_label }}
+                  </td>
+                </tr>
+                {% endfor %}
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:8px;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#5c5850;">
+              {% if discount_code %}Discount ({{ discount_code }}): − {{ discount_amount_label }}<br>{% endif %}
+              Payment: {{ payment_method }}<br>
+              <strong style="color:#131210;">Total: {{ total_label }}</strong>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:20px 8px 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;">
+              <a href="{{ admin_url }}" style="color:#9C7C4B;">Open in admin</a>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
