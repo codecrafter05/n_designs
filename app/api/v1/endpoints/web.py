@@ -329,10 +329,9 @@ def _order_email_payload(
     subtotal,
     shipping,
     applied_discount,
-    discount_row,
     total,
 ) -> dict:
-    discount_code = discount_row.code if discount_row is not None else None
+    discount_code = order.discount_code_snapshot
     placed = order.created_at
     site = (settings.SITE_URL or "").rstrip("/")
     return {
@@ -877,6 +876,9 @@ def storefront_checkout_submit(
             payment_method="Cash on Delivery",
             discount_code_id=discount_row.id if discount_row is not None else None,
             discount_amount=applied_discount if discount_row is not None else None,
+            discount_code_snapshot=(
+                discount_row.code if discount_row is not None else None
+            ),
         )
         db.add(order)
         db.flush()
@@ -914,7 +916,6 @@ def storefront_checkout_submit(
                 subtotal,
                 shipping,
                 applied_discount,
-                discount_row,
                 total,
             ),
         )
@@ -996,10 +997,10 @@ def storefront_order_confirmation(
                 Decimal("0"),
             )
         ),
-        order_discount_code=order.discount_code.code if order.discount_code else None,
+        order_discount_code=order.discount_code_snapshot,
         order_discount_amount_label=(
             _fmt_bhd(order.discount_amount)
-            if order.discount_code_id is not None
+            if order.discount_code_snapshot
             else None
         ),
         order_shipping_label=_fmt_bhd(SHIPPING_BHD),

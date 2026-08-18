@@ -37,6 +37,9 @@ class Order(Base):
     discount_amount: Mapped[float | None] = mapped_column(
         Numeric(12, 3), nullable=True
     )
+    discount_code_snapshot: Mapped[str | None] = mapped_column(
+        String(50), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc), nullable=False
     )

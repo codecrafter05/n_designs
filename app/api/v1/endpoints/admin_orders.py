@@ -206,7 +206,7 @@ def orders_detail(order_id: int, request: Request, db: Session = Depends(get_db)
             "customer": order.customer,
             "items": items,
             "items_subtotal_label": _fmt_bhd(items_subtotal),
-            "discount_code": order.discount_code.code if order.discount_code else None,
+            "discount_code": order.discount_code_snapshot,
             "discount_amount_label": _fmt_bhd(discount_amount),
             "shipping_label": _fmt_bhd(shipping),
             "computed_total_label": _fmt_bhd(computed_total),
