@@ -1,0 +1,80 @@
+{% extends "admin/base.html" %}
+
+{% block title %}N Designs — Discount Codes{% endblock %}
+
+{% block content %}
+  <div class="page-breadcrumb d-none d-sm-flex align-items-center mb-3">
+    <div class="breadcrumb-title pe-3">N Designs</div>
+    <div class="ps-3">
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-0 p-0">
+          <li class="breadcrumb-item"><a href="/admin/dashboard"><i class="material-icons-outlined">home</i></a></li>
+          <li class="breadcrumb-item active" aria-current="page">Discount Codes</li>
+        </ol>
+      </nav>
+    </div>
+  </div>
+
+  <div class="cat-toolbar mb-3">
+    <h4 class="fw-bold mb-0">Discount Codes</h4>
+    <a href="/admin/discount-codes/new" class="btn btn-admin-primary">Add Discount Code</a>
+  </div>
+
+  {% if not rows %}
+  <div class="card rounded-4">
+    <div class="card-body text-center py-5">
+      <span class="material-icons-outlined text-secondary" style="font-size:48px;">local_offer</span>
+      <h4 class="fw-bold mt-3 mb-2">No discount codes yet</h4>
+      <p class="mb-3 text-secondary">Create a code to offer a percentage off at checkout.</p>
+      <a href="/admin/discount-codes/new" class="btn btn-admin-primary">Add Discount Code</a>
+    </div>
+  </div>
+  {% else %}
+  <div class="card rounded-4">
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th scope="col">Code</th>
+              <th scope="col">Percentage</th>
+              <th scope="col">Usage</th>
+              <th scope="col">Sale items</th>
+              <th scope="col">Status</th>
+              <th scope="col">Created</th>
+              <th scope="col"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in rows %}
+            <tr>
+              <td class="fw-semibold">{{ row.code }}</td>
+              <td>{{ row.percentage_label }}</td>
+              <td>{{ row.usage_label }}</td>
+              <td>
+                {% if row.applies_to_sale %}
+                <span class="alert-admin-success d-inline-block px-2 py-1 mb-0">Yes</span>
+                {% else %}
+                <span class="text-secondary">No</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if row.is_active %}
+                <span class="alert-admin-success d-inline-block px-2 py-1 mb-0">Active</span>
+                {% else %}
+                <span class="alert-admin-neutral d-inline-block px-2 py-1 mb-0">Inactive</span>
+                {% endif %}
+              </td>
+              <td class="text-secondary">{{ row.created_label }}</td>
+              <td class="text-end">
+                <a href="/admin/discount-codes/{{ row.id }}/edit" class="btn btn-sm btn-admin-secondary">Edit</a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+{% endblock %}

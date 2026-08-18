@@ -10,6 +10,7 @@ from app.core.database import Base
 
 if TYPE_CHECKING:
     from app.models.customer import Customer
+    from app.models.discount import DiscountCode
     from app.models.product import ProductVariant
 
 
@@ -28,6 +29,14 @@ class Order(Base):
     total: Mapped[float] = mapped_column(Numeric(12, 3), nullable=False)
     shipping_address: Mapped[str] = mapped_column(Text, nullable=False)
     payment_method: Mapped[str] = mapped_column(String(100), nullable=False)
+    discount_code_id: Mapped[int | None] = mapped_column(
+        ForeignKey("discount_codes.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    discount_amount: Mapped[float | None] = mapped_column(
+        Numeric(12, 3), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc), nullable=False
     )
@@ -39,6 +48,9 @@ class Order(Base):
     )
 
     customer: Mapped[Customer | None] = relationship(back_populates="orders")
+    discount_code: Mapped[DiscountCode | None] = relationship(
+        back_populates="orders"
+    )
     items: Mapped[list[OrderItem]] = relationship(
         back_populates="order",
         cascade="all, delete-orphan",

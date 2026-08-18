@@ -9,6 +9,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
 
 if TYPE_CHECKING:
+    from app.models.discount import DiscountCode
     from app.models.product import ProductVariant
 
 
@@ -20,6 +21,11 @@ class Cart(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     session_token: Mapped[str] = mapped_column(
         String(64), unique=True, index=True, nullable=False
+    )
+    discount_code_id: Mapped[int | None] = mapped_column(
+        ForeignKey("discount_codes.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc), nullable=False
@@ -34,6 +40,9 @@ class Cart(Base):
     items: Mapped[list[CartItem]] = relationship(
         back_populates="cart",
         cascade="all, delete-orphan",
+    )
+    discount_code: Mapped[DiscountCode | None] = relationship(
+        back_populates="carts"
     )
 
 

@@ -46,12 +46,19 @@
     <aside class="summary">
       <h3>Order Summary</h3>
       <div class="summary-row"><span>Subtotal</span><span id="cartSubtotal">{{ cart_subtotal_label }}</span></div>
-      <div class="summary-row"><span>Shipping</span><span>Calculated at checkout</span></div>
-      <div class="promo">
-        <input type="text" placeholder="Promo code">
-        <button type="button">Apply</button>
+      <div class="summary-row" id="discountRow" {% if not discount_code %}hidden{% endif %}>
+        <span>
+          Discount (<span id="discountCodeLabel">{{ discount_code or '' }}</span>)
+          <button type="button" class="promo-remove" id="removePromo">Remove</button>
+        </span>
+        <span id="discountAmount">− {{ discount_amount_label }}</span>
       </div>
-      <div class="summary-row total"><span>Total</span><span id="cartTotal">{{ cart_subtotal_label }}</span></div>
+      <div class="summary-row"><span>Shipping</span><span>Calculated at checkout</span></div>
+      <div class="promo" id="promoBox" {% if discount_code %}hidden{% endif %}>
+        <input type="text" id="promoInput" placeholder="Promo code" autocomplete="off" aria-label="Promo code">
+        <button type="button" id="promoApply">Apply</button>
+      </div>
+      <div class="summary-row total"><span>Total</span><span id="cartTotal">{{ cart_payable_label }}</span></div>
       <a href="/checkout" class="btn btn-primary btn-block" style="margin-top:22px;">Checkout</a>
       <a href="{{ whatsapp_url }}" class="btn btn-ghost btn-block" style="margin-top:10px;" target="_blank">Order via WhatsApp</a>
     </aside>
@@ -81,11 +88,20 @@
     });
   }
 
-  function setTotals(label) {
+  function setTotals(data) {
     var sub = document.getElementById('cartSubtotal');
     var total = document.getElementById('cartTotal');
-    if (sub) sub.textContent = label;
-    if (total) total.textContent = label;
+    var discountRow = document.getElementById('discountRow');
+    var promoBox = document.getElementById('promoBox');
+    var codeLabel = document.getElementById('discountCodeLabel');
+    var amountEl = document.getElementById('discountAmount');
+    if (sub) sub.textContent = data.subtotal_label;
+    if (total) total.textContent = data.total_label || data.subtotal_label;
+    var hasCode = Boolean(data.discount_code);
+    if (discountRow) discountRow.hidden = !hasCode;
+    if (promoBox) promoBox.hidden = hasCode;
+    if (codeLabel) codeLabel.textContent = data.discount_code || '';
+    if (amountEl) amountEl.textContent = '− ' + (data.discount_amount_label || '');
   }
 
   function showEmpty() {
@@ -113,7 +129,7 @@
         var undo = result.data.undo;
         row.remove();
         if (window.updateCartBadge) window.updateCartBadge(result.data.count);
-        setTotals(result.data.subtotal_label);
+        setTotals(result.data);
         if (!document.querySelector('.cart-item')) showEmpty();
         if (window.showStorefrontToast) {
           window.showStorefrontToast('Removed from bag', {
@@ -153,9 +169,54 @@
         if (priceEl) priceEl.textContent = result.data.line.line_label;
       }
       if (window.updateCartBadge) window.updateCartBadge(result.data.count);
-      setTotals(result.data.subtotal_label);
+      setTotals(result.data);
     });
   });
+
+  var promoApply = document.getElementById('promoApply');
+  var promoInput = document.getElementById('promoInput');
+  var removePromo = document.getElementById('removePromo');
+  function applyCode() {
+    var code = (promoInput && promoInput.value || '').trim();
+    if (!code) {
+      if (window.showStorefrontToast) {
+        window.showStorefrontToast('This code is invalid or has expired');
+      }
+      return;
+    }
+    post('/cart/apply-code', { code: code }).then(function (result) {
+      if (!result.ok || !result.data.ok) {
+        if (window.showStorefrontToast) {
+          window.showStorefrontToast(result.data.error || 'This code is invalid or has expired');
+        }
+        return;
+      }
+      if (promoInput) promoInput.value = '';
+      setTotals(result.data);
+    });
+  }
+  if (promoApply) promoApply.addEventListener('click', applyCode);
+  if (promoInput) {
+    promoInput.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        applyCode();
+      }
+    });
+  }
+  if (removePromo) {
+    removePromo.addEventListener('click', function () {
+      post('/cart/remove-code', {}).then(function (result) {
+        if (!result.ok || !result.data.ok) {
+          if (window.showStorefrontToast) {
+            window.showStorefrontToast(result.data.error || 'Could not remove this code.');
+          }
+          return;
+        }
+        setTotals(result.data);
+      });
+    });
+  }
 })();
 </script>
 {% endblock %}

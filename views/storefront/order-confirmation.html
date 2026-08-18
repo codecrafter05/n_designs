@@ -46,6 +46,11 @@
       <div class="summary-row"><span>Order</span><span>{{ order_number }}</span></div>
       <div class="summary-row"><span>Payment</span><span>{{ order.payment_method }}</span></div>
       <div class="summary-row"><span>Ship to</span><span class="confirm-addr">{{ order.shipping_address }}</span></div>
+      <div class="summary-row"><span>Subtotal</span><span>{{ order_subtotal_label }}</span></div>
+      {% if order_discount_code %}
+      <div class="summary-row"><span>Discount ({{ order_discount_code }})</span><span>− {{ order_discount_amount_label }}</span></div>
+      {% endif %}
+      <div class="summary-row"><span>Shipping</span><span>{{ order_shipping_label }}</span></div>
       <div class="summary-row total"><span>Total</span><span>{{ order_total_label }}</span></div>
       <a href="/categories" class="btn btn-primary btn-block" style="margin-top:22px;">Continue Shopping</a>
     </aside>

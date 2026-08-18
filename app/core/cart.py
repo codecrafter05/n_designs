@@ -13,9 +13,14 @@ COOKIE_MAX_AGE = 90 * 24 * 60 * 60
 
 
 def _item_load():
-    return selectinload(Cart.items).selectinload(CartItem.variant).selectinload(
-        ProductVariant.color
-    ).selectinload(ProductColor.product).selectinload(Product.images)
+    return (
+        selectinload(Cart.items)
+        .selectinload(CartItem.variant)
+        .selectinload(ProductVariant.color)
+        .selectinload(ProductColor.product)
+        .selectinload(Product.images),
+        selectinload(Cart.discount_code),
+    )
 
 
 def new_session_token() -> str:
@@ -43,7 +48,7 @@ def get_or_create_cart(db: Session, request: Request) -> tuple[Cart, str, bool]:
 
     cart = (
         db.query(Cart)
-        .options(_item_load())
+        .options(*_item_load())
         .filter(Cart.session_token == token)
         .first()
     )
@@ -59,7 +64,7 @@ def get_or_create_cart(db: Session, request: Request) -> tuple[Cart, str, bool]:
 def reload_cart(db: Session, cart_id: int) -> Cart | None:
     return (
         db.query(Cart)
-        .options(_item_load())
+        .options(*_item_load())
         .filter(Cart.id == cart_id)
         .first()
     )

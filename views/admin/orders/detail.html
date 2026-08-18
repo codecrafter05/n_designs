@@ -76,6 +76,12 @@
             <span>Items subtotal</span>
             <span>{{ items_subtotal_label }}</span>
           </div>
+          {% if discount_code %}
+          <div class="d-flex justify-content-between mb-2">
+            <span>Discount ({{ discount_code }})</span>
+            <span>− {{ discount_amount_label }}</span>
+          </div>
+          {% endif %}
           <div class="d-flex justify-content-between mb-2">
             <span>Shipping <span class="text-secondary">(flat placeholder)</span></span>
             <span>{{ shipping_label }}</span>
@@ -86,7 +92,7 @@
           </div>
           {% if total_mismatch %}
           <div class="alert-admin-error d-inline-block px-2 py-1 mt-3 mb-0">
-            Stored total does not match items + shipping ({{ computed_total_label }}). Showing the recorded order total.
+            Stored total does not match items − discount + shipping ({{ computed_total_label }}). Showing the recorded order total.
           </div>
           {% endif %}
         </div>

@@ -13,11 +13,19 @@ from app.core.cart import get_or_create_cart, reload_cart, set_cart_cookie
 from app.core.config import settings
 from app.core.customer_auth import create_customer_session, get_current_customer
 from app.core.database import get_db
+from app.core.discounts import (
+    REMOVED_AT_CHECKOUT,
+    cart_pricing,
+    discount_amount,
+    is_usable,
+)
 from app.core.security import hash_password
 from app.core.orders import SHIPPING_BHD, order_number
+from app.core.pricing import is_on_sale as _is_on_sale, payable as _payable
 from app.models.cart import Cart
 from app.models.category import Category
 from app.models.customer import Customer
+from app.models.discount import DiscountCode
 from app.models.order import Order, OrderItem
 from app.models.product import Product, ProductColor, ProductVariant
 
@@ -147,19 +155,6 @@ def _fmt_bhd(amount) -> str:
         return f"BHD {int(value)}"
     text = f"{value:.3f}".rstrip("0").rstrip(".")
     return f"BHD {text}"
-
-
-def _is_on_sale(variant: ProductVariant) -> bool:
-    return (
-        variant.compare_at_price is not None
-        and variant.compare_at_price < variant.price
-    )
-
-
-def _payable(variant: ProductVariant) -> Decimal:
-    if _is_on_sale(variant):
-        return Decimal(str(variant.compare_at_price))
-    return Decimal(str(variant.price))
 
 
 def _product_query(db: Session):
@@ -324,6 +319,22 @@ def _cart_lines(cart) -> tuple[list[dict], Decimal]:
             }
         )
     return lines, subtotal
+
+
+def _promo_vars(cart) -> dict:
+    pricing = cart_pricing(cart)
+    return {
+        "discount_code": pricing.discount_code,
+        "discount_amount_label": _fmt_bhd(pricing.discount_amount),
+        "discount_row_label": (
+            f"Discount ({pricing.discount_code})" if pricing.discount_code else ""
+        ),
+        "cart_subtotal_label": _fmt_bhd(pricing.subtotal),
+        "cart_payable_label": _fmt_bhd(pricing.payable_total),
+        "cart_discount_amount": pricing.discount_amount,
+        "cart_payable_total": pricing.payable_total,
+        "cart_subtotal": pricing.subtotal,
+    }
 
 
 def _storefront_page(
@@ -516,13 +527,14 @@ def storefront_product(request: Request, slug: str, db: Session = Depends(get_db
 @router.get("/cart", response_class=HTMLResponse, include_in_schema=False)
 def storefront_cart(request: Request, db: Session = Depends(get_db)):
     cart, _, _ = get_or_create_cart(db, request)
-    lines, subtotal = _cart_lines(cart)
+    lines, _subtotal = _cart_lines(cart)
+    promo = _promo_vars(cart)
     return _storefront_page(
         request,
         "storefront/cart.html",
         db=db,
         cart_lines=lines,
-        cart_subtotal_label=_fmt_bhd(subtotal) if lines else _fmt_bhd(0),
+        **promo,
     )
 
 
@@ -581,20 +593,20 @@ def _checkout_page(
     create_account: bool = False,
 ):
     cart, _, _ = get_or_create_cart(db, request)
-    lines, subtotal = _cart_lines(cart)
+    lines, _subtotal = _cart_lines(cart)
     if not lines:
         return RedirectResponse(url="/cart", status_code=303)
     customer = get_current_customer(request, db)
     if form is None and customer is not None:
         form = _form_from_customer(customer)
     shipping = SHIPPING_BHD
-    total = subtotal + shipping
+    promo = _promo_vars(cart)
+    total = promo["cart_payable_total"] + shipping
     return _storefront_page(
         request,
         "storefront/checkout.html",
         db=db,
         cart_lines=lines,
-        cart_subtotal_label=_fmt_bhd(subtotal),
         shipping_label=_fmt_bhd(shipping),
         checkout_total_label=_fmt_bhd(total),
         countries=COUNTRIES,
@@ -602,6 +614,7 @@ def _checkout_page(
         checkout_error=error,
         logged_in=customer is not None,
         create_account=create_account,
+        **promo,
     )
 
 
@@ -742,7 +755,21 @@ def storefront_checkout_submit(
 
         lines, subtotal = _cart_lines(cart)
         shipping = SHIPPING_BHD
-        total = subtotal + shipping
+        discount_row = None
+        applied_discount = Decimal("0")
+        if cart.discount_code_id:
+            discount_row = (
+                db.query(DiscountCode)
+                .filter(DiscountCode.id == cart.discount_code_id)
+                .with_for_update()
+                .first()
+            )
+            if not is_usable(discount_row):
+                cart.discount_code_id = None
+                db.commit()
+                return fail(REMOVED_AT_CHECKOUT)
+            applied_discount = discount_amount(cart, discount_row)
+        total = subtotal - applied_discount + shipping
         email_key = form["email"].lower()
         form["email"] = email_key
 
@@ -802,6 +829,8 @@ def storefront_checkout_submit(
             total=total,
             shipping_address=shipping_address,
             payment_method="Cash on Delivery",
+            discount_code_id=discount_row.id if discount_row is not None else None,
+            discount_amount=applied_discount if discount_row is not None else None,
         )
         db.add(order)
         db.flush()
@@ -819,6 +848,9 @@ def storefront_checkout_submit(
             )
             variant.stock_quantity = variant.stock_quantity - item.quantity
 
+        if discount_row is not None:
+            discount_row.times_used = discount_row.times_used + 1
+        cart.discount_code_id = None
         for item in list(cart.items):
             db.delete(item)
         db.commit()
@@ -844,6 +876,7 @@ def storefront_order_confirmation(
         db.query(Order)
         .options(
             selectinload(Order.customer),
+            selectinload(Order.discount_code),
             selectinload(Order.items)
             .selectinload(OrderItem.variant)
             .selectinload(ProductVariant.color)
@@ -890,6 +923,22 @@ def storefront_order_confirmation(
         order_number=order_number(order.id),
         order_items=items,
         order_total_label=_fmt_bhd(order.total),
+        order_subtotal_label=_fmt_bhd(
+            sum(
+                (
+                    Decimal(str(item.price_at_purchase)) * item.quantity
+                    for item in order.items
+                ),
+                Decimal("0"),
+            )
+        ),
+        order_discount_code=order.discount_code.code if order.discount_code else None,
+        order_discount_amount_label=(
+            _fmt_bhd(order.discount_amount)
+            if order.discount_code_id is not None
+            else None
+        ),
+        order_shipping_label=_fmt_bhd(SHIPPING_BHD),
     )
 
 

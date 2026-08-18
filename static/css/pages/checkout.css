@@ -83,6 +83,14 @@ legend{
 .mini-item .p{margin-left:auto;font-size:13px;white-space:nowrap;}
 .summary-row{display:flex;justify-content:space-between;font-size:13.5px;color:var(--ink-70);margin:10px 0;}
 .summary-row.total{color:var(--ink);font-size:16px;padding-top:14px;border-top:1px solid var(--line);}
+.promo{display:flex;gap:0;border-bottom:1px solid var(--ink);margin:16px 0 20px;}
+.promo input{flex:1;background:none;border:0;padding:10px 2px;font-size:13px;}
+.promo button{background:none;border:0;font-size:11px;letter-spacing:.1em;text-transform:uppercase;}
+.promo[hidden],.summary-row[hidden]{display:none !important;}
+.promo-remove{
+  background:none;border:0;padding:0;margin-left:8px;font-size:11px;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--ink-45);text-decoration:underline;text-underline-offset:3px;
+}
 
 @media (max-width:900px){
   .co-layout{grid-template-columns:1fr;}

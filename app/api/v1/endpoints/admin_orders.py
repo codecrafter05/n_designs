@@ -62,6 +62,7 @@ def _status_chip(status: str) -> dict:
 def _order_load():
     return (
         selectinload(Order.customer),
+        selectinload(Order.discount_code),
         selectinload(Order.items)
         .selectinload(OrderItem.variant)
         .selectinload(ProductVariant.color)
@@ -152,7 +153,8 @@ def orders_detail(order_id: int, request: Request, db: Session = Depends(get_db)
         )
 
     shipping = SHIPPING_BHD
-    computed_total = items_subtotal + shipping
+    discount_amount = Decimal(str(order.discount_amount or 0))
+    computed_total = items_subtotal - discount_amount + shipping
     stored_total = Decimal(str(order.total)).quantize(Decimal("0.001"))
     total_mismatch = computed_total.quantize(Decimal("0.001")) != stored_total
 
@@ -167,6 +169,8 @@ def orders_detail(order_id: int, request: Request, db: Session = Depends(get_db)
             "customer": order.customer,
             "items": items,
             "items_subtotal_label": _fmt_bhd(items_subtotal),
+            "discount_code": order.discount_code.code if order.discount_code else None,
+            "discount_amount_label": _fmt_bhd(discount_amount),
             "shipping_label": _fmt_bhd(shipping),
             "computed_total_label": _fmt_bhd(computed_total),
             "stored_total_label": _fmt_bhd(stored_total),

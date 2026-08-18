@@ -20,10 +20,18 @@ Approved references: Categories list/form (`views/admin/category/`), Maxton `for
 
 ## Checkout (COD MVP)
 
-Checkout is `POST /checkout` in one DB transaction: find-or-create Customer by email, create Order + OrderItems, decrement `ProductVariant.stock_quantity`, then delete `CartItem` rows (the `Cart` row and `cart_session` cookie stay). Shipping is a flat **BHD 3.000** placeholder until real rates exist. Card and BenefitPay radios stay in the markup, disabled, for a later Gate-E/MPGS slot-in. `GET /order-confirmation/{order_id}` requires the owning customer to be logged in when `customer_id` is set; true guest orders (`customer_id` NULL) remain reachable by URL.
+Checkout is `POST /checkout` in one DB transaction: find-or-create Customer by email, create Order + OrderItems, apply a cart-level discount code if still valid (increment `DiscountCode.times_used`), decrement `ProductVariant.stock_quantity`, then delete `CartItem` rows and clear `Cart.discount_code_id` (the `Cart` row and `cart_session` cookie stay). Shipping is a flat **BHD 3.000** placeholder until real rates exist. Card and BenefitPay radios stay in the markup, disabled, for a later Gate-E/MPGS slot-in. `GET /order-confirmation/{order_id}` requires the owning customer to be logged in when `customer_id` is set; true guest orders (`customer_id` NULL) remain reachable by URL.
 
 ## URL conventions
 
 Admin section pages live directly under `/admin/{section}`, not `/admin/dashboard/{section}`. Only the dashboard home page itself is `/admin/dashboard`.
 
-Examples: `/admin/categories`, `/admin/categories/new`, `/admin/products`, `/admin/orders`, `/admin/customers`, `/admin/settings`. Login stays `/admin/login`.
+Examples: `/admin/categories`, `/admin/categories/new`, `/admin/products`, `/admin/orders`, `/admin/discount-codes`, `/admin/customers`, `/admin/settings`. Login stays `/admin/login`.
+
+## Discount codes
+
+Codes are stored uppercase; `summer20` and `SUMMER20` are the same code. There is **no delete** — deactivate (`Active` off) to retire a code, same reasoning as Orders. `times_used` is incremented inside the order-creation transaction (row locked with `FOR UPDATE`) so a failed checkout never counts and two concurrent checkouts cannot both consume the last remaining use.
+
+A code applied on the cart is stored as `Cart.discount_code_id` and carries into checkout automatically. Invalid / inactive / maxed-out codes get a generic storefront toast: **“This code is invalid or has expired”** — do not reveal why (max uses, inactive, unknown). If a code becomes invalid between apply and submit, checkout removes it, recalculates without it, and asks the customer to review the total rather than placing the order.
+
+When `applies_to_sale_items` is off, the percentage applies only to line items that are not on sale (`compare_at_price` is missing or not lower than `price`). Sale-line payables stay at the sale price. Shipping is added after the discount.

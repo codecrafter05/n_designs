@@ -1,0 +1,95 @@
+{% extends "admin/base.html" %}
+
+{% block title %}N Designs — {{ 'Edit Discount Code' if row else 'Add Discount Code' }}{% endblock %}
+
+{% block content %}
+  <div class="page-breadcrumb d-none d-sm-flex align-items-center mb-3">
+    <div class="breadcrumb-title pe-3">N Designs</div>
+    <div class="ps-3">
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-0 p-0">
+          <li class="breadcrumb-item"><a href="/admin/dashboard"><i class="material-icons-outlined">home</i></a></li>
+          <li class="breadcrumb-item"><a href="/admin/discount-codes">Discount Codes</a></li>
+          <li class="breadcrumb-item active" aria-current="page">{{ 'Edit' if row else 'Add' }}</li>
+        </ol>
+      </nav>
+    </div>
+  </div>
+
+  <div class="card rounded-4">
+    <div class="card-body p-4">
+      <h4 class="fw-bold mb-3">{{ 'Edit discount code' if row else 'Add discount code' }}</h4>
+
+      <form method="post"
+            action="{{ '/admin/discount-codes/' ~ row.id ~ '/edit' if row else '/admin/discount-codes/new' }}">
+        <div class="mb-3">
+          <label class="form-label" for="code">Code</label>
+          <input class="form-control text-uppercase" type="text" id="code" name="code" required
+                 maxlength="50" autocomplete="off"
+                 value="{{ row.code if row else '' }}">
+          <div class="form-text">Stored uppercase. “summer20” and “SUMMER20” are the same code.</div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label" for="percentage">Percentage off</label>
+          <input class="form-control" type="number" id="percentage" name="percentage"
+                 required min="1" max="100" step="0.01"
+                 value="{{ row.percentage if row else '' }}">
+          <div class="form-text">A whole number or decimal between 1 and 100. Example: 20 for 20% off.</div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label" for="max_uses">Max uses</label>
+          <input class="form-control" type="number" id="max_uses" name="max_uses"
+                 min="1" step="1"
+                 value="{{ row.max_uses if row and row.max_uses is not none else '' }}">
+          <div class="form-text">Leave empty for unlimited uses.</div>
+        </div>
+
+        {% if row %}
+        <p class="text-secondary mb-3">Used {{ row.times_used }} time{{ 's' if row.times_used != 1 else '' }} so far. Usage is not editable.</p>
+        {% endif %}
+
+        <div class="mb-3">
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" role="switch" value="1"
+                   id="applies_to_sale_items" name="applies_to_sale_items"
+                   {% if row and row.applies_to_sale_items %}checked{% endif %}>
+            <label class="form-check-label" for="applies_to_sale_items">Applies to sale items</label>
+          </div>
+          <div class="form-text">When off, the discount only applies to items that are not already on sale.</div>
+        </div>
+
+        <div class="mb-4">
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" role="switch" value="1"
+                   id="is_active" name="is_active"
+                   {% if not row or row.is_active %}checked{% endif %}>
+            <label class="form-check-label" for="is_active">Active</label>
+          </div>
+          <div class="form-text">Turn off to retire a code. Codes are not deleted once created.</div>
+        </div>
+
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-admin-primary">{{ 'Save changes' if row else 'Create discount code' }}</button>
+          <a href="/admin/discount-codes" class="btn btn-admin-secondary">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  var input = document.getElementById('code');
+  if (!input) return;
+  input.addEventListener('input', function () {
+    var start = input.selectionStart;
+    var end = input.selectionEnd;
+    input.value = input.value.toUpperCase();
+    input.setSelectionRange(start, end);
+  });
+})();
+</script>
+{% endblock %}

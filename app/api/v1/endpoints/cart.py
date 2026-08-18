@@ -1,14 +1,14 @@
 from datetime import datetime, timezone
-from decimal import Decimal
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session, selectinload
 
-from app.api.v1.endpoints.web import _fmt_bhd, _is_on_sale, _payable
+from app.api.v1.endpoints.web import _fmt_bhd, _payable
 from app.core.cart import get_or_create_cart, reload_cart, set_cart_cookie
 from app.core.database import get_db
+from app.core.discounts import GENERIC_INVALID, cart_pricing, find_code, is_usable
 from app.models.cart import Cart, CartItem
 from app.models.product import Product, ProductColor, ProductVariant
 
@@ -29,21 +29,24 @@ class RemoveIn(BaseModel):
     cart_item_id: int
 
 
+class ApplyCodeIn(BaseModel):
+    code: str = ""
+
+
 def _error(message: str, status: int = 400) -> JSONResponse:
     return JSONResponse({"ok": False, "error": message}, status_code=status)
 
 
 def _payload(cart: Cart, extra: dict | None = None) -> dict:
     count = sum(item.quantity for item in cart.items)
-    subtotal = Decimal("0")
-    for item in cart.items:
-        if item.variant is None:
-            continue
-        subtotal += _payable(item.variant) * item.quantity
+    pricing = cart_pricing(cart)
     data = {
         "ok": True,
         "count": count,
-        "subtotal_label": _fmt_bhd(subtotal) if count else _fmt_bhd(0),
+        "subtotal_label": _fmt_bhd(pricing.subtotal) if count else _fmt_bhd(0),
+        "discount_code": pricing.discount_code,
+        "discount_amount_label": _fmt_bhd(pricing.discount_amount),
+        "total_label": _fmt_bhd(pricing.payable_total) if count else _fmt_bhd(0),
     }
     if extra:
         data.update(extra)
@@ -183,4 +186,29 @@ def cart_remove(body: RemoveIn, request: Request, db: Session = Depends(get_db))
 @router.get("/cart/summary", include_in_schema=False)
 def cart_summary(request: Request, db: Session = Depends(get_db)):
     cart, token, needs_cookie = get_or_create_cart(db, request)
+    return _json(cart, token, needs_cookie)
+
+
+@router.post("/cart/apply-code", include_in_schema=False)
+def cart_apply_code(body: ApplyCodeIn, request: Request, db: Session = Depends(get_db)):
+    cart, token, needs_cookie = get_or_create_cart(db, request)
+    if not cart.items:
+        return _error(GENERIC_INVALID)
+    found = find_code(db, body.code)
+    if not is_usable(found):
+        return _error(GENERIC_INVALID)
+    cart.discount_code_id = found.id
+    _touch(cart)
+    db.commit()
+    cart = reload_cart(db, cart.id)
+    return _json(cart, token, needs_cookie)
+
+
+@router.post("/cart/remove-code", include_in_schema=False)
+def cart_remove_code(request: Request, db: Session = Depends(get_db)):
+    cart, token, needs_cookie = get_or_create_cart(db, request)
+    cart.discount_code_id = None
+    _touch(cart)
+    db.commit()
+    cart = reload_cart(db, cart.id)
     return _json(cart, token, needs_cookie)
