@@ -351,6 +351,9 @@ body.nav-open{overflow:hidden;}
 }
 .footer-logo{height:160px;width:auto;display:block;}
 .footer-brand p{color:var(--on-dark-60);font-size:13px;max-width:32ch;margin-top:16px;}
+.footer-phone{margin-top:14px;}
+.footer-phone a{color:var(--on-dark);font-size:13.5px;opacity:.9;letter-spacing:.02em;}
+.footer-phone a:hover{opacity:1;text-decoration:underline;text-underline-offset:4px;}
 .footer-social{display:flex;gap:14px;margin-top:26px;}
 .footer-social a{
   width:34px;height:34px;border:1px solid rgba(243,239,227,.25);border-radius:50%;

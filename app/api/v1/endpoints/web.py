@@ -281,8 +281,10 @@ def storefront_context(request: Request, *, nav_variant: str = "solid", **extra)
     return {
         "request": request,
         "nav_variant": nav_variant,
-        "whatsapp_number": settings.WHATSAPP_NUMBER,
-        "whatsapp_url": f"https://wa.me/{settings.WHATSAPP_NUMBER}",
+        "whatsapp_number": settings.contact_digits,
+        "whatsapp_url": settings.whatsapp_url,
+        "contact_phone": settings.contact_display,
+        "contact_tel": settings.contact_tel,
         **extra,
     }
 
@@ -553,7 +555,7 @@ def storefront_product(request: Request, slug: str, db: Session = Depends(get_db
     category = product.category
     parent = category.parent if category else None
     ask_url = (
-        f"https://wa.me/{settings.WHATSAPP_NUMBER}"
+        f"{settings.whatsapp_url}"
         f"?text={quote(f'Hi, I am interested in {product.name}')}"
     )
     return _storefront_page(
