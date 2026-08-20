@@ -78,15 +78,9 @@
       <fieldset>
         <legend>Payment</legend>
         <div class="pay-options">
-          <label class="pay-option is-disabled">
-            <input type="radio" name="payment_method" value="card" disabled>
-            Credit / Debit Card
-            <span class="soon">Coming soon</span>
-          </label>
-          <label class="pay-option is-disabled">
-            <input type="radio" name="payment_method" value="benefit" disabled>
-            BenefitPay
-            <span class="soon">Coming soon</span>
+          <label class="pay-option">
+            <input type="radio" name="payment_method" value="online">
+            Pay Online
           </label>
           <label class="pay-option is-active">
             <input type="radio" name="payment_method" value="cod" checked>
@@ -173,6 +167,7 @@
       option.classList.add('is-active');
       var input = option.querySelector('input');
       if (input && !input.disabled) input.checked = true;
+      if (window.syncPayButton) window.syncPayButton();
     });
   });
 
@@ -264,6 +259,16 @@
 
   if (form && btn) {
     btn.setAttribute('data-label', btn.textContent);
+    window.syncPayButton = function () {
+      var online = form.querySelector('input[name="payment_method"][value="online"]');
+      var label = btn.getAttribute('data-label') || btn.textContent;
+      if (online && online.checked) {
+        btn.textContent = label.replace('Place Order', 'Continue to payment');
+      } else {
+        btn.textContent = label;
+      }
+    };
+    window.syncPayButton();
     form.addEventListener('submit', function (e) {
       if (!form.checkValidity()) return;
       if (!loggedIn && !guestAck) {
@@ -282,7 +287,8 @@
         }
       }
       btn.disabled = true;
-      btn.textContent = 'Placing order…';
+      var online = form.querySelector('input[name="payment_method"][value="online"]');
+      btn.textContent = (online && online.checked) ? 'Redirecting…' : 'Placing order…';
     });
   }
 

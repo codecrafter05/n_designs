@@ -1,6 +1,8 @@
 import json
+import logging
 import os
 from decimal import Decimal
+from uuid import uuid4
 from urllib.parse import quote, urlencode
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Form, HTTPException, Request
@@ -9,26 +11,37 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import exists, func, select
 from sqlalchemy.orm import Session, aliased, selectinload
 
-from app.core.cart import get_or_create_cart, reload_cart, set_cart_cookie
-from app.core.config import settings
+from app.core.cart import get_or_create_cart, set_cart_cookie
+from app.core.config import Settings, settings
 from app.core.customer_auth import create_customer_session, get_current_customer
 from app.core.database import get_db
-from app.core.discounts import (
-    REMOVED_AT_CHECKOUT,
-    cart_pricing,
-    discount_amount,
-    is_usable,
-)
-from app.core.email import send_order_emails
+from app.core.discounts import REMOVED_AT_CHECKOUT, cart_pricing
 from app.core.security import hash_password
-from app.core.orders import SHIPPING_BHD, order_number
+from app.core.orders import (
+    PAYMENT_COD,
+    PAYMENT_TAP,
+    SHIPPING_BHD,
+    CheckoutBlocked,
+    CheckoutDiscountGone,
+    CheckoutFailed,
+    CheckoutGone,
+    as_money,
+    finalize_order,
+    form_from_session,
+    fmt_bhd,
+    order_number,
+    plan_from_session,
+    prepare_checkout,
+)
 from app.core.pricing import is_on_sale as _is_on_sale, payable as _payable
-from app.models.cart import Cart
+from app.core.tap import TAP_START_ERROR, TapError, create_charge, retrieve_charge, tap_configured
 from app.models.category import Category
 from app.models.customer import Customer
-from app.models.discount import DiscountCode
 from app.models.order import Order, OrderItem
+from app.models.payment import PaymentSession
 from app.models.product import Product, ProductColor, ProductVariant
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["web"])
 
@@ -151,11 +164,7 @@ COUNTRIES = (
 
 
 def _fmt_bhd(amount) -> str:
-    value = Decimal(str(amount)).quantize(Decimal("0.001"))
-    if value == value.to_integral():
-        return f"BHD {int(value)}"
-    text = f"{value:.3f}".rstrip("0").rstrip(".")
-    return f"BHD {text}"
+    return fmt_bhd(amount)
 
 
 def _product_query(db: Session):
@@ -320,49 +329,6 @@ def _cart_lines(cart) -> tuple[list[dict], Decimal]:
             }
         )
     return lines, subtotal
-
-
-def _order_email_payload(
-    order: Order,
-    form: dict,
-    lines: list[dict],
-    subtotal,
-    shipping,
-    applied_discount,
-    total,
-) -> dict:
-    discount_code = order.discount_code_snapshot
-    placed = order.created_at
-    site = (settings.SITE_URL or "").rstrip("/")
-    return {
-        "order_id": order.id,
-        "order_number": order_number(order.id),
-        "order_date": placed.strftime("%d %b %Y") if placed else "",
-        "customer_name": f"{form['first_name']} {form['last_name']}".strip(),
-        "customer_email": form["email"],
-        "customer_phone": form["phone"],
-        "shipping_address": order.shipping_address,
-        "payment_method": order.payment_method,
-        "items": [
-            {
-                "name": line["name"],
-                "color": line["color"],
-                "size": line["size"],
-                "quantity": line["quantity"],
-                "line_label": line["line_label"],
-            }
-            for line in lines
-        ],
-        "subtotal_label": _fmt_bhd(subtotal),
-        "discount_code": discount_code,
-        "discount_amount_label": (
-            _fmt_bhd(applied_discount) if discount_code else None
-        ),
-        "shipping_label": _fmt_bhd(shipping),
-        "total_label": _fmt_bhd(total),
-        "confirmation_url": f"{site}/order-confirmation/{order.id}",
-        "admin_url": f"{site}/admin/orders/{order.id}",
-    }
 
 
 def _promo_vars(cart) -> dict:
@@ -619,15 +585,6 @@ def _form_from_customer(customer: Customer) -> dict:
     )
 
 
-def _apply_checkout_profile(customer: Customer, form: dict) -> None:
-    customer.name = f"{form['first_name']} {form['last_name']}".strip()
-    customer.email = form["email"].lower()
-    customer.phone = form["phone"]
-    customer.address = form["address"]
-    customer.city = form["city"]
-    customer.country = form["country"]
-
-
 def _checkout_page(
     request: Request,
     db: Session,
@@ -662,24 +619,97 @@ def _checkout_page(
     )
 
 
-def _cart_problems(cart) -> list[str]:
-    problems = []
-    for item in cart.items:
-        variant = item.variant
-        product = variant.color.product if variant and variant.color else None
-        name = product.name if product else "An item"
-        detail = ""
-        if variant and variant.color:
-            detail = f" ({variant.color.color_name} · {variant.size})"
-        if product is None or not product.is_active:
-            problems.append(f"{name}{detail} is no longer available.")
-            continue
-        if variant.stock_quantity < item.quantity:
-            problems.append(
-                f"{name}{detail} only has {variant.stock_quantity} left — "
-                f"you have {item.quantity} in your bag."
-            )
-    return problems
+def _payment_failed_redirect() -> RedirectResponse:
+    return RedirectResponse(url="/checkout?payment_error=1", status_code=303)
+
+
+def _start_tap_checkout(
+    db: Session,
+    prepared,
+    form: dict,
+    logged_in: Customer | None,
+    want_account: bool,
+    account_password: str,
+) -> str | None:
+    cart_id = prepared.cart.id
+    items_json = json.dumps([line.as_json() for line in prepared.lines])
+    token = uuid4().hex
+    total = prepared.total
+    subtotal = prepared.subtotal
+    applied_discount = prepared.applied_discount
+    discount_id = (
+        prepared.discount_row.id if prepared.discount_row is not None else None
+    )
+    discount_code = (
+        prepared.discount_row.code if prepared.discount_row is not None else None
+    )
+    customer_id = logged_in.id if logged_in is not None else None
+    db.rollback()
+    if not tap_configured():
+        logger.warning("Tap start skipped; TAP_SECRET_KEY is not set")
+        return None
+    password_hash = hash_password(account_password) if want_account else None
+    session = PaymentSession(
+        token=token,
+        status="pending",
+        cart_id=cart_id,
+        customer_id=customer_id,
+        email=form["email"],
+        first_name=form["first_name"],
+        last_name=form["last_name"],
+        phone=form["phone"],
+        address=form["address"],
+        city=form["city"],
+        country=form["country"],
+        shipping_address=f"{form['address']}, {form['city']}, {form['country']}",
+        want_account=want_account,
+        password_hash=password_hash,
+        amount=total,
+        currency="BHD",
+        subtotal=subtotal,
+        discount_code_id=discount_id,
+        discount_amount=applied_discount if discount_id is not None else None,
+        discount_code_snapshot=discount_code,
+        items_json=items_json,
+    )
+    db.add(session)
+    db.commit()
+    site = (Settings().SITE_URL or "").rstrip("/")
+    try:
+        charge = create_charge(
+            amount=total,
+            currency="BHD",
+            token=token,
+            form=form,
+            redirect_url=f"{site}/payment/callback/{token}",
+            description="N Designs order",
+        )
+    except TapError:
+        row = db.query(PaymentSession).filter(PaymentSession.token == token).first()
+        if row is not None:
+            db.delete(row)
+            db.commit()
+        return None
+    charge_id = charge.get("id")
+    pay_url = (charge.get("transaction") or {}).get("url")
+    if not charge_id or not pay_url:
+        logger.warning(
+            "Tap create charge missing id/url session=%s charge=%s",
+            token,
+            charge_id,
+        )
+        row = db.query(PaymentSession).filter(PaymentSession.token == token).first()
+        if row is not None:
+            db.delete(row)
+            db.commit()
+        return None
+    session = db.query(PaymentSession).filter(PaymentSession.token == token).first()
+    if session is None:
+        return None
+    session.tap_charge_id = charge_id
+    db.commit()
+    logger.warning("Tap redirect session=%s charge=%s", token, charge_id)
+    return pay_url
 
 
 @router.get("/checkout/check-email", include_in_schema=False)
@@ -697,7 +727,12 @@ def checkout_check_email(email: str = "", db: Session = Depends(get_db)):
 
 @router.get("/checkout", response_class=HTMLResponse, include_in_schema=False)
 def storefront_checkout(request: Request, db: Session = Depends(get_db)):
-    return _checkout_page(request, db)
+    error = None
+    if request.query_params.get("payment_error") == "1":
+        error = (
+            "Payment was not completed — please try again or choose Cash on Delivery"
+        )
+    return _checkout_page(request, db, error=error)
 
 
 @router.post("/checkout", include_in_schema=False)
@@ -756,176 +791,221 @@ def storefront_checkout_submit(
         return fail("Please fill in: " + ", ".join(missing) + ".")
     if "@" not in form["email"]:
         return fail("Please enter a valid email.")
-    if payment_method != "cod":
-        return fail("Cash on Delivery is the only payment method available right now.")
+    if payment_method not in ("cod", "online"):
+        return fail("Please choose a payment method.")
     if want_account and len(account_password) < 8:
         return fail("Password must be at least 8 characters.")
 
     cart, _, _ = get_or_create_cart(db, request)
-    lines, subtotal = _cart_lines(cart)
+    lines, _subtotal = _cart_lines(cart)
     if not lines:
         return RedirectResponse(url="/cart", status_code=303)
 
-    login_after = False
-    customer = None
     try:
-        locked = (
-            db.query(Cart)
-            .filter(Cart.id == cart.id)
-            .with_for_update()
-            .first()
-        )
-        if locked is None:
-            return RedirectResponse(url="/cart", status_code=303)
-        cart = reload_cart(db, locked.id)
-        variant_ids = sorted(
-            {
-                item.product_variant_id
-                for item in cart.items
-                if item.product_variant_id
-            }
-        )
-        for variant_id in variant_ids:
-            db.query(ProductVariant).filter(
-                ProductVariant.id == variant_id
-            ).with_for_update().first()
-        cart = reload_cart(db, cart.id)
-        if not cart.items:
-            db.rollback()
-            return RedirectResponse(url="/cart", status_code=303)
-        problems = _cart_problems(cart)
-        if problems:
-            db.rollback()
-            return fail(" ".join(problems) + " Update your bag and try again.")
-
-        lines, subtotal = _cart_lines(cart)
-        shipping = SHIPPING_BHD
-        discount_row = None
-        applied_discount = Decimal("0")
-        if cart.discount_code_id:
-            discount_row = (
-                db.query(DiscountCode)
-                .filter(DiscountCode.id == cart.discount_code_id)
-                .with_for_update()
-                .first()
-            )
-            if not is_usable(discount_row):
-                cart.discount_code_id = None
-                db.commit()
-                return fail(REMOVED_AT_CHECKOUT)
-            applied_discount = discount_amount(cart, discount_row)
-        total = subtotal - applied_discount + shipping
-        email_key = form["email"].lower()
-        form["email"] = email_key
-
-        if logged_in is not None:
-            customer = (
-                db.query(Customer).filter(Customer.id == logged_in.id).first()
-            )
-            if customer is None:
-                db.rollback()
-                return fail("Something went wrong, please try again.")
-            other = (
-                db.query(Customer)
-                .filter(func.lower(Customer.email) == email_key, Customer.id != customer.id)
-                .first()
-            )
-            if other is not None:
-                db.rollback()
-                return fail("This email is already in use")
-            _apply_checkout_profile(customer, form)
-        else:
-            existing = (
-                db.query(Customer).filter(func.lower(Customer.email) == email_key).first()
-            )
-            if existing is not None and existing.hashed_password:
-                if want_account:
-                    db.rollback()
-                    return fail(
-                        "An account with this email already exists — log in instead"
-                    )
-                customer = None
-            elif existing is not None:
-                customer = existing
-                _apply_checkout_profile(customer, form)
-                if want_account:
-                    customer.hashed_password = hash_password(account_password)
-                    login_after = True
-            else:
-                customer = Customer(
-                    name=f"{form['first_name']} {form['last_name']}".strip(),
-                    email=email_key,
-                    phone=form["phone"],
-                    address=form["address"],
-                    city=form["city"],
-                    country=form["country"],
-                    hashed_password=hash_password(account_password) if want_account else None,
-                )
-                db.add(customer)
-                db.flush()
-                login_after = want_account
-
-        shipping_address = (
-            f"{form['address']}, {form['city']}, {form['country']}"
-        )
-        order = Order(
-            customer_id=customer.id if customer is not None else None,
-            status="pending",
-            total=total,
-            shipping_address=shipping_address,
-            payment_method="Cash on Delivery",
-            discount_code_id=discount_row.id if discount_row is not None else None,
-            discount_amount=applied_discount if discount_row is not None else None,
-            discount_code_snapshot=(
-                discount_row.code if discount_row is not None else None
-            ),
-        )
-        db.add(order)
-        db.flush()
-
-        for item in cart.items:
-            variant = item.variant
-            payable = _payable(variant)
-            db.add(
-                OrderItem(
-                    order_id=order.id,
-                    product_variant_id=variant.id,
-                    quantity=item.quantity,
-                    price_at_purchase=payable,
-                )
-            )
-            variant.stock_quantity = variant.stock_quantity - item.quantity
-
-        if discount_row is not None:
-            discount_row.times_used = discount_row.times_used + 1
-        cart.discount_code_id = None
-        for item in list(cart.items):
-            db.delete(item)
-        db.commit()
+        prepared = prepare_checkout(db, cart)
+    except CheckoutGone:
+        db.rollback()
+        return RedirectResponse(url="/cart", status_code=303)
+    except CheckoutDiscountGone:
+        return fail(REMOVED_AT_CHECKOUT)
+    except CheckoutBlocked as exc:
+        db.rollback()
+        return fail(exc.message)
     except Exception:
         db.rollback()
         return fail("Something went wrong, please try again.")
 
-    try:
-        background_tasks.add_task(
-            send_order_emails,
-            _order_email_payload(
-                order,
+    if payment_method == "online":
+        try:
+            pay_url = _start_tap_checkout(
+                db,
+                prepared,
                 form,
-                lines,
-                subtotal,
-                shipping,
-                applied_discount,
-                total,
-            ),
+                logged_in,
+                want_account,
+                account_password,
+            )
+        except Exception:
+            db.rollback()
+            logger.warning("Tap checkout start failed", exc_info=True)
+            return fail(TAP_START_ERROR)
+        if not pay_url:
+            return fail(TAP_START_ERROR)
+        return RedirectResponse(url=pay_url, status_code=302)
+
+    try:
+        result = finalize_order(
+            db,
+            form=form,
+            lines=prepared.lines,
+            subtotal=prepared.subtotal,
+            shipping=prepared.shipping,
+            applied_discount=prepared.applied_discount,
+            total=prepared.total,
+            discount_row=prepared.discount_row,
+            cart=prepared.cart,
+            logged_in=logged_in,
+            want_account=want_account,
+            account_password=account_password,
+            payment_method=PAYMENT_COD,
+            background_tasks=background_tasks,
+        )
+    except CheckoutFailed as exc:
+        db.rollback()
+        return fail(exc.message)
+    except CheckoutDiscountGone:
+        db.rollback()
+        return fail(REMOVED_AT_CHECKOUT)
+    except CheckoutBlocked as exc:
+        db.rollback()
+        return fail(exc.message)
+    except Exception:
+        db.rollback()
+        return fail("Something went wrong, please try again.")
+
+    response = RedirectResponse(
+        url=f"/order-confirmation/{result.order.id}", status_code=303
+    )
+    response.background = background_tasks
+    if result.login_after and result.customer is not None:
+        create_customer_session(response, db, result.customer)
+    return response
+
+
+@router.get(
+    "/payment/callback/{token}",
+    include_in_schema=False,
+)
+def payment_callback(
+    token: str,
+    request: Request,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    tap_id: str = "",
+):
+    session = (
+        db.query(PaymentSession).filter(PaymentSession.token == token).first()
+    )
+    if session is None:
+        raise HTTPException(status_code=404, detail="Not Found")
+    if session.status == "succeeded" and session.resulting_order_id:
+        return RedirectResponse(
+            url=f"/order-confirmation/{session.resulting_order_id}",
+            status_code=303,
+        )
+
+    tap_id = (tap_id or request.query_params.get("tap_id") or "").strip()
+    if not tap_id:
+        logger.warning("Tap callback missing tap_id session=%s", token)
+        session.status = "failed"
+        db.commit()
+        return _payment_failed_redirect()
+
+    try:
+        charge = retrieve_charge(tap_id)
+    except TapError:
+        logger.warning(
+            "Tap retrieve failed session=%s tap_id=%s", token, tap_id
+        )
+        return _payment_failed_redirect()
+
+    session = (
+        db.query(PaymentSession)
+        .filter(PaymentSession.token == token)
+        .with_for_update()
+        .first()
+    )
+    if session is None:
+        db.rollback()
+        raise HTTPException(status_code=404, detail="Not Found")
+    if session.status == "succeeded" and session.resulting_order_id:
+        order_id = session.resulting_order_id
+        db.rollback()
+        return RedirectResponse(
+            url=f"/order-confirmation/{order_id}",
+            status_code=303,
+        )
+
+    charge_id = str(charge.get("id") or "")
+    logger.warning(
+        "Tap callback session=%s charge=%s status=%s",
+        token,
+        charge_id,
+        charge.get("status"),
+    )
+    if not session.tap_charge_id or charge_id != session.tap_charge_id:
+        logger.warning(
+            "Tap callback charge mismatch session=%s tap_id=%s stored=%s",
+            token,
+            charge_id,
+            session.tap_charge_id,
+        )
+        session.status = "failed"
+        db.commit()
+        return _payment_failed_redirect()
+
+    amount_ok = as_money(charge.get("amount")) == as_money(session.amount)
+    currency_ok = str(charge.get("currency") or "").upper() == str(
+        session.currency or "BHD"
+    ).upper()
+    if not amount_ok or not currency_ok:
+        logger.warning(
+            "Tap callback amount/currency mismatch session=%s charge=%s amount=%s/%s currency=%s/%s",
+            token,
+            charge_id,
+            charge.get("amount"),
+            session.amount,
+            charge.get("currency"),
+            session.currency,
+        )
+        session.status = "failed"
+        db.commit()
+        return _payment_failed_redirect()
+
+    if str(charge.get("status") or "").upper() != "CAPTURED":
+        session.status = "failed"
+        db.commit()
+        return _payment_failed_redirect()
+
+    lines, cart, discount_row, logged_in = plan_from_session(db, session)
+    form = form_from_session(session)
+    try:
+        result = finalize_order(
+            db,
+            form=form,
+            lines=lines,
+            subtotal=as_money(session.subtotal),
+            shipping=SHIPPING_BHD,
+            applied_discount=as_money(session.discount_amount),
+            total=as_money(session.amount),
+            discount_row=discount_row,
+            cart=cart,
+            logged_in=logged_in,
+            want_account=bool(session.want_account),
+            password_hash=session.password_hash,
+            payment_method=PAYMENT_TAP,
+            tap_charge_id=session.tap_charge_id,
+            payment_session=session,
+            lock_variants=True,
+            honor_discount_snapshot=True,
+            background_tasks=background_tasks,
         )
     except Exception:
-        pass
+        db.rollback()
+        logger.warning(
+            "Tap finalize failed session=%s charge=%s",
+            token,
+            charge_id,
+            exc_info=True,
+        )
+        return _payment_failed_redirect()
 
-    response = RedirectResponse(url=f"/order-confirmation/{order.id}", status_code=303)
+    response = RedirectResponse(
+        url=f"/order-confirmation/{result.order.id}", status_code=303
+    )
     response.background = background_tasks
-    if login_after and customer is not None:
-        create_customer_session(response, db, customer)
+    if result.login_after and result.customer is not None:
+        create_customer_session(response, db, result.customer)
     return response
 
 

@@ -5,6 +5,7 @@ from app.models.customer import Customer, CustomerSession
 from app.models.discount import DiscountCode
 from app.models.order import Order, OrderItem
 from app.models.cart import Cart, CartItem
+from app.models.payment import PaymentSession
 
 __all__ = [
     "User",
@@ -20,4 +21,5 @@ __all__ = [
     "OrderItem",
     "Cart",
     "CartItem",
+    "PaymentSession",
 ]

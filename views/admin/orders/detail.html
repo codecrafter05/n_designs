@@ -110,6 +110,9 @@
           <p class="mb-3">{{ order.shipping_address }}</p>
           <label class="form-label">Payment</label>
           <p class="mb-0">{{ order.payment_method }}</p>
+          {% if order.tap_charge_id %}
+          <p class="mb-0 mt-2 text-secondary">Payment reference: {{ order.tap_charge_id }}</p>
+          {% endif %}
         </div>
       </div>
 

@@ -26,6 +26,8 @@ class Settings(BaseSettings):
     MAIL_FROM_NAME: str = "N Designs"
     ADMIN_NOTIFICATION_EMAIL: str = ""
     SITE_URL: str = "http://127.0.0.1:8000"
+    TAP_SECRET_KEY: str = ""
+    TAP_PUBLIC_KEY: str = ""
 
     @model_validator(mode="after")
     def default_admin_notification_email(self):
