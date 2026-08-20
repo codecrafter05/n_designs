@@ -92,7 +92,13 @@ def send_order_emails(payload: dict[str, Any]) -> None:
     cfg = _cfg()
     site = (cfg.SITE_URL or "").rstrip("/")
     number = payload["order_number"]
-    context = {**payload, "site_url": site}
+    context = {
+        **payload,
+        "site_url": site,
+        "contact_phone": cfg.contact_display,
+        "whatsapp_url": cfg.whatsapp_url,
+        "contact_tel": cfg.contact_tel,
+    }
 
     customer_to = payload.get("customer_email") or ""
     customer_html = render_email("emails/order_confirmation.html", context)

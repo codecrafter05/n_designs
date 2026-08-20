@@ -17,6 +17,27 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     WHATSAPP_NUMBER: str = "97300000000"
 
+    @property
+    def contact_digits(self) -> str:
+        return "".join(c for c in (self.WHATSAPP_NUMBER or "") if c.isdigit())
+
+    @property
+    def contact_display(self) -> str:
+        digits = self.contact_digits
+        if digits.startswith("973") and len(digits) == 11:
+            return f"+973 {digits[3:7]} {digits[7:]}"
+        return f"+{digits}" if digits else ""
+
+    @property
+    def contact_tel(self) -> str:
+        digits = self.contact_digits
+        return f"tel:+{digits}" if digits else "#"
+
+    @property
+    def whatsapp_url(self) -> str:
+        digits = self.contact_digits
+        return f"https://wa.me/{digits}" if digits else "#"
+
     MAIL_HOST: str = ""
     MAIL_PORT: int = 465
     MAIL_USERNAME: str = ""
