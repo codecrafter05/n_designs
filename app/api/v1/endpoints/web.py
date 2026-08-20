@@ -34,6 +34,14 @@ from app.core.orders import (
     prepare_checkout,
 )
 from app.core.pricing import is_on_sale as _is_on_sale, payable as _payable
+from app.core.site_content import (
+    about_strip_images,
+    about_values,
+    get_site_settings,
+    hero_slides,
+    split_lines,
+    split_paragraphs,
+)
 from app.core.tap import TAP_START_ERROR, TapError, create_charge, retrieve_charge, tap_configured
 from app.models.category import Category
 from app.models.customer import Customer
@@ -386,6 +394,8 @@ def storefront_home(request: Request, db: Session = Depends(get_db)):
         .limit(3)
         .all()
     )
+    site = get_site_settings(db)
+    slides = hero_slides(db)
     return _storefront_page(
         request,
         "storefront/index.html",
@@ -402,12 +412,34 @@ def storefront_home(request: Request, db: Session = Depends(get_db)):
                 _sale_products(db, limit=HOMEPAGE_SALE_LIMIT, random=True)
             )
         ],
+        hero_slides=slides,
+        hero_heading_lines=split_lines(site.hero_heading if site else None),
     )
 
 
 @router.get("/about", response_class=HTMLResponse, include_in_schema=False)
 def storefront_about(request: Request, db: Session = Depends(get_db)):
-    return _storefront_page(request, "storefront/about.html", db=db)
+    site = get_site_settings(db)
+    value_rows = about_values(db)
+    return _storefront_page(
+        request,
+        "storefront/about.html",
+        db=db,
+        about_image_url=site.about_image_url if site else None,
+        about_heading_lines=split_lines(site.about_heading if site else None),
+        about_body_paragraphs=split_paragraphs(site.about_body if site else None),
+        about_value_cards=[
+            {
+                "num": f"{index + 1:02d}",
+                "heading": row.heading,
+                "body": row.body,
+            }
+            for index, row in enumerate(value_rows)
+        ],
+        about_quote=(site.about_quote or "").strip() if site else "",
+        about_cite=(site.about_cite or "").strip() if site else "",
+        about_strip=about_strip_images(db),
+    )
 
 
 @router.get("/sale", response_class=HTMLResponse, include_in_schema=False)
@@ -1102,15 +1134,3 @@ def login_page(request: Request):
 @router.get("/admin/dashboard", response_class=HTMLResponse, include_in_schema=False)
 def dashboard_page(request: Request):
     return templates.TemplateResponse("admin/dashboard/index.html", {"request": request})
-
-
-def _section_page(request: Request, template: str, page_title: str):
-    return templates.TemplateResponse(
-        template,
-        {"request": request, "page_title": page_title},
-    )
-
-
-@router.get("/admin/settings", response_class=HTMLResponse, include_in_schema=False)
-def settings_page(request: Request):
-    return _section_page(request, "admin/settings/index.html", "Settings")

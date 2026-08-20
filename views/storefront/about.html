@@ -8,45 +8,60 @@
 {% block content %}
 <div class="wrap">
   <div class="about-hero">
+    {% if about_image_url %}
+    <img class="ph" src="{{ about_image_url }}" alt="">
+    {% else %}
     <div class="ph tone-a"></div>
+    {% endif %}
+    {% if about_heading_lines or about_body_paragraphs %}
     <div>
+      {% if about_heading_lines %}
       <span class="eyebrow">Our Story</span>
-      <h1>Designed in Manama,<br>worn everywhere.</h1>
-      <p>N Designs began as one woman's answer to a simple gap: modest wear that felt as considered as anything on the international runways she loved. Every abaya, jalabiya and dress we make starts from the same question — does it move well, does it last, and does it feel like you?</p>
-      <p style="margin-top:16px;">Today the collections travel from our studio in Bahrain to wardrobes across the Gulf, Europe and beyond, each piece cut, fitted and finished by hand in small batches.</p>
+      <h1>{% for line in about_heading_lines %}{{ line }}{% if not loop.last %}<br>{% endif %}{% endfor %}</h1>
+      {% endif %}
+      {% for para in about_body_paragraphs %}
+      <p>{% for line in para %}{{ line }}{% if not loop.last %}<br>{% endif %}{% endfor %}</p>
+      {% endfor %}
     </div>
+    {% endif %}
   </div>
 
-  <div class="about-values">
+  {% if about_value_cards %}
+  <div class="about-values" style="grid-template-columns:repeat({{ about_value_cards|length }}, minmax(0,1fr))">
+    {% for card in about_value_cards %}
     <div class="value-card">
-      <span class="num">01</span>
-      <h3>Considered Fabric</h3>
-      <p>We work with brushed crepes, linen blends and matte satins chosen for how they move and travel, not just how they photograph.</p>
+      <span class="num">{{ card.num }}</span>
+      <h3>{{ card.heading }}</h3>
+      <p>{{ card.body }}</p>
     </div>
-    <div class="value-card">
-      <span class="num">02</span>
-      <h3>Small Batches</h3>
-      <p>Every collection is produced in limited runs, cut and finished by hand in our Manama studio — never mass-produced.</p>
-    </div>
-    <div class="value-card">
-      <span class="num">03</span>
-      <h3>Made to Travel</h3>
-      <p>Packed and shipped from Bahrain to the Gulf and internationally, with the same care whether you're two streets or two continents away.</p>
-    </div>
+    {% endfor %}
   </div>
+  {% endif %}
 </div>
 
+{% if about_quote %}
 <section class="about-quote">
   <div class="wrap">
-    <blockquote>"Quiet elegance isn't the absence of statement — it's a statement made once, well."</blockquote>
-    <cite>— Founder, N Designs</cite>
+    <blockquote>“{{ about_quote }}”</blockquote>
+    {% if about_cite %}
+    <cite>— {{ about_cite }}</cite>
+    {% endif %}
   </div>
 </section>
+{% endif %}
 
+{% if about_strip %}
+<div class="about-strip" style="grid-template-columns:repeat({{ about_strip|length }}, minmax(0,1fr))">
+  {% for image in about_strip %}
+  <img class="ph" src="{{ image.image_url }}" alt="">
+  {% endfor %}
+</div>
+{% else %}
 <div class="about-strip" aria-hidden="true">
   <div class="ph tone-b"></div>
   <div class="ph tone-c"></div>
   <div class="ph tone-d"></div>
   <div class="ph tone-a"></div>
 </div>
+{% endif %}
 {% endblock %}

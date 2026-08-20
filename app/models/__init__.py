@@ -6,6 +6,7 @@ from app.models.discount import DiscountCode
 from app.models.order import Order, OrderItem
 from app.models.cart import Cart, CartItem
 from app.models.payment import PaymentSession
+from app.models.site import AboutStripImage, AboutValue, HeroSlide, SiteSettings
 
 __all__ = [
     "User",
@@ -22,4 +23,8 @@ __all__ = [
     "Cart",
     "CartItem",
     "PaymentSession",
+    "SiteSettings",
+    "HeroSlide",
+    "AboutValue",
+    "AboutStripImage",
 ]

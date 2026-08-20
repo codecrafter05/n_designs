@@ -22,6 +22,7 @@ from app.api.v1.endpoints.admin_customers import router as admin_customers_route
 from app.api.v1.endpoints.admin_discount_codes import router as admin_discount_codes_router
 from app.api.v1.endpoints.admin_orders import router as admin_orders_router
 from app.api.v1.endpoints.admin_products import router as admin_products_router
+from app.api.v1.endpoints.admin_settings import router as admin_settings_router
 from app.api.v1.endpoints.cart import router as cart_router
 
 TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "..", "template")
@@ -54,6 +55,7 @@ app.include_router(admin_products_router)
 app.include_router(admin_orders_router)
 app.include_router(admin_customers_router)
 app.include_router(admin_discount_codes_router)
+app.include_router(admin_settings_router)
 app.include_router(cart_router)
 app.include_router(account_router)
 app.include_router(web_router)

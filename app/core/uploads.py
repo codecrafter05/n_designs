@@ -7,7 +7,7 @@ from fastapi import HTTPException, UploadFile, status
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 _UPLOAD_ROOT = _PROJECT_ROOT / "static" / "uploads"
 PUBLIC_ROOT = "/static/uploads"
-ALLOWED_KINDS = {"categories", "products"}
+ALLOWED_KINDS = {"categories", "products", "hero", "about"}
 
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp"}

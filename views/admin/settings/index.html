@@ -1,6 +1,6 @@
 {% extends "admin/base.html" %}
 
-{% block title %}N Designs — {{ page_title }}{% endblock %}
+{% block title %}N Designs — Settings{% endblock %}
 
 {% block content %}
   <div class="page-breadcrumb d-none d-sm-flex align-items-center mb-3">
@@ -9,17 +9,324 @@
       <nav aria-label="breadcrumb">
         <ol class="breadcrumb mb-0 p-0">
           <li class="breadcrumb-item"><a href="/admin/dashboard"><i class="material-icons-outlined">home</i></a></li>
-          <li class="breadcrumb-item active" aria-current="page">{{ page_title }}</li>
+          <li class="breadcrumb-item active" aria-current="page">Settings</li>
         </ol>
       </nav>
     </div>
   </div>
 
-  <div class="card rounded-4">
-    <div class="card-body text-center py-5">
-      <span class="material-icons-outlined text-secondary" style="font-size:48px;">hourglass_empty</span>
-      <h4 class="fw-bold mt-3 mb-2">{{ page_title }}</h4>
-      <p class="mb-0 text-secondary">This section is coming soon</p>
+  <form id="settings-form" method="post" action="/admin/settings" enctype="multipart/form-data">
+    <input type="hidden" name="gallery_json" id="gallery_json">
+    <input type="hidden" name="strip_json" id="strip_json">
+    <input type="hidden" name="values_json" id="values_json">
+    <input type="hidden" name="about_clear_image" id="about_clear_image" value="0">
+
+    <div class="card rounded-4 mb-3">
+      <div class="card-body p-4">
+        <h4 class="fw-bold mb-4">Homepage Hero</h4>
+        <div class="mb-4">
+          <label class="form-label" for="gallery-input">Images</label>
+          <div id="gallery" class="d-flex flex-wrap gap-3 mb-3"></div>
+          <input class="form-control" type="file" id="gallery-input"
+                 accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" multiple>
+        </div>
+        <div class="mb-0">
+          <label class="form-label" for="hero_heading">Heading</label>
+          <textarea class="form-control" id="hero_heading" name="hero_heading" rows="3">{{ settings.hero_heading if settings and settings.hero_heading else '' }}</textarea>
+        </div>
+      </div>
     </div>
-  </div>
+
+    <h4 class="fw-bold mb-3 mt-4">About Page</h4>
+
+    <div class="card rounded-4 mb-3">
+      <div class="card-body p-4">
+        <h5 class="mb-4">Intro</h5>
+        <div class="mb-4">
+          <label class="form-label" for="about_image">Image</label>
+          <div id="about-preview-wrap" class="mb-2"{% if not settings or not settings.about_image_url %} hidden{% endif %}>
+            <img id="about-preview" src="{{ settings.about_image_url if settings and settings.about_image_url else '' }}" alt="" class="img-preview">
+            <div class="mt-2">
+              <button type="button" class="btn btn-sm btn-admin-danger" id="about-remove">Remove image</button>
+            </div>
+          </div>
+          <input class="form-control" type="file" id="about_image" name="about_image"
+                 accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="about_heading">Heading</label>
+          <textarea class="form-control" id="about_heading" name="about_heading" rows="2" maxlength="255">{{ settings.about_heading if settings and settings.about_heading else '' }}</textarea>
+        </div>
+        <div class="mb-0">
+          <label class="form-label" for="about_body">Body</label>
+          <textarea class="form-control" id="about_body" name="about_body" rows="5">{{ settings.about_body if settings and settings.about_body else '' }}</textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="card rounded-4 mb-3">
+      <div class="card-body p-4">
+        <div class="d-flex align-items-center justify-content-between mb-4">
+          <h5 class="mb-0">Value cards</h5>
+          <button type="button" class="btn btn-admin-primary" id="add-value">Add card</button>
+        </div>
+        <div id="values" class="d-flex flex-column gap-3"></div>
+      </div>
+    </div>
+
+    <div class="card rounded-4 mb-3">
+      <div class="card-body p-4">
+        <h5 class="mb-4">Quote</h5>
+        <div class="mb-3">
+          <label class="form-label" for="about_quote">Quote</label>
+          <textarea class="form-control" id="about_quote" name="about_quote" rows="3">{{ settings.about_quote if settings and settings.about_quote else '' }}</textarea>
+        </div>
+        <div class="mb-0">
+          <label class="form-label" for="about_cite">Attribution</label>
+          <input class="form-control" type="text" id="about_cite" name="about_cite" maxlength="255"
+                 value="{{ settings.about_cite if settings and settings.about_cite else '' }}">
+        </div>
+      </div>
+    </div>
+
+    <div class="card rounded-4 mb-3">
+      <div class="card-body p-4">
+        <h5 class="mb-4">Image strip</h5>
+        <div id="strip" class="d-flex flex-wrap gap-3 mb-3"></div>
+        <input class="form-control" type="file" id="strip-input"
+               accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" multiple>
+      </div>
+    </div>
+
+    <div class="d-flex gap-2 mb-4">
+      <button type="submit" class="btn btn-admin-primary">Save changes</button>
+    </div>
+  </form>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
+<script>
+(function () {
+  var INITIAL_GALLERY = JSON.parse({{ gallery_json | tojson }});
+  var INITIAL_STRIP = JSON.parse({{ strip_json | tojson }});
+  var INITIAL_VALUES = JSON.parse({{ values_json | tojson }});
+
+  function el(html) {
+    var wrap = document.createElement('div');
+    wrap.innerHTML = html.trim();
+    return wrap.firstElementChild;
+  }
+
+  function escapeHtml(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function bindGallery(opts) {
+    var listEl = document.getElementById(opts.listId);
+    var inputEl = document.getElementById(opts.inputId);
+    var items = [];
+    var newFileIndex = 0;
+
+    function render() {
+      listEl.innerHTML = '';
+      if (!items.length) {
+        listEl.innerHTML = '<p class="form-text mb-0">No images yet</p>';
+        return;
+      }
+      items.forEach(function (item, index) {
+        var node = el(
+          '<div class="card rounded-4 shadow-none border prod-gallery-card" data-index="' + index + '">' +
+            '<div class="card-body p-2 text-center">' +
+              '<span class="material-icons-outlined cat-handle">drag_indicator</span>' +
+              '<img src="' + item.url + '" alt="" class="img-preview w-100">' +
+              '<button type="button" class="btn btn-sm btn-admin-danger w-100 mt-2 prod-gallery-remove">Remove</button>' +
+            '</div>' +
+          '</div>'
+        );
+        node.querySelector('.prod-gallery-remove').addEventListener('click', function () {
+          if (item.url && item.url.indexOf('blob:') === 0) URL.revokeObjectURL(item.url);
+          items.splice(index, 1);
+          render();
+        });
+        listEl.appendChild(node);
+      });
+    }
+
+    new Sortable(listEl, {
+      handle: '.cat-handle',
+      animation: 150,
+      ghostClass: 'sortable-ghost',
+      onEnd: function () {
+        var next = [];
+        listEl.querySelectorAll('.prod-gallery-card').forEach(function (node) {
+          var i = parseInt(node.getAttribute('data-index'), 10);
+          if (!isNaN(i) && items[i]) next.push(items[i]);
+        });
+        items = next;
+        render();
+      }
+    });
+
+    inputEl.addEventListener('change', function (e) {
+      Array.from(e.target.files || []).forEach(function (file) {
+        items.push({
+          file: file,
+          newIndex: newFileIndex++,
+          url: URL.createObjectURL(file)
+        });
+      });
+      e.target.value = '';
+      render();
+    });
+
+    (opts.initial || []).forEach(function (item) {
+      items.push({ id: item.id, url: item.url });
+    });
+    render();
+
+    return {
+      collect: function () {
+        var payload = [];
+        var files = [];
+        items.forEach(function (item) {
+          if (item.id) {
+            payload.push({ id: item.id });
+          } else if (item.file) {
+            payload.push({ new: files.length });
+            files.push(item.file);
+          }
+        });
+        return { payload: payload, files: files };
+      }
+    };
+  }
+
+  var heroGallery = bindGallery({
+    listId: 'gallery',
+    inputId: 'gallery-input',
+    initial: INITIAL_GALLERY
+  });
+  var stripGallery = bindGallery({
+    listId: 'strip',
+    inputId: 'strip-input',
+    initial: INITIAL_STRIP
+  });
+
+  var valuesEl = document.getElementById('values');
+
+  function valueCard(data) {
+    data = data || {};
+    var node = el(
+      '<div class="card rounded-4 shadow-none border">' +
+        '<div class="card-body">' +
+          '<div class="d-flex align-items-center justify-content-between mb-3">' +
+            '<span class="material-icons-outlined cat-handle">drag_indicator</span>' +
+            '<button type="button" class="btn btn-sm btn-admin-danger value-remove">Remove</button>' +
+          '</div>' +
+          (data.id ? '<input type="hidden" class="value-id" value="' + data.id + '">' : '') +
+          '<div class="mb-3">' +
+            '<label class="form-label">Heading</label>' +
+            '<input class="form-control value-heading" type="text" maxlength="255" value="' + escapeHtml(data.heading || '') + '">' +
+          '</div>' +
+          '<div class="mb-0">' +
+            '<label class="form-label">Body</label>' +
+            '<textarea class="form-control value-body" rows="3">' + escapeHtml(data.body || '') + '</textarea>' +
+          '</div>' +
+        '</div>' +
+      '</div>'
+    );
+    node.querySelector('.value-remove').addEventListener('click', function () { node.remove(); });
+    return node;
+  }
+
+  function renderValues(rows) {
+    valuesEl.innerHTML = '';
+    (rows || []).forEach(function (row) { valuesEl.appendChild(valueCard(row)); });
+    if (!valuesEl.children.length) {
+      valuesEl.innerHTML = '<p class="form-text mb-0" id="values-empty">No value cards yet</p>';
+    }
+  }
+
+  document.getElementById('add-value').addEventListener('click', function () {
+    var empty = document.getElementById('values-empty');
+    if (empty) empty.remove();
+    valuesEl.appendChild(valueCard({}));
+  });
+
+  new Sortable(valuesEl, {
+    handle: '.cat-handle',
+    animation: 150,
+    ghostClass: 'sortable-ghost'
+  });
+
+  renderValues(INITIAL_VALUES);
+
+  var aboutInput = document.getElementById('about_image');
+  var aboutPreview = document.getElementById('about-preview');
+  var aboutWrap = document.getElementById('about-preview-wrap');
+  var aboutClear = document.getElementById('about_clear_image');
+  var aboutRemove = document.getElementById('about-remove');
+  var aboutObjectUrl = null;
+
+  function showAboutPreview(src, clearing) {
+    aboutPreview.src = src || '';
+    aboutWrap.hidden = !src;
+    aboutClear.value = clearing ? '1' : '0';
+  }
+
+  aboutRemove.addEventListener('click', function () {
+    if (aboutObjectUrl) {
+      URL.revokeObjectURL(aboutObjectUrl);
+      aboutObjectUrl = null;
+    }
+    aboutInput.value = '';
+    showAboutPreview('', true);
+  });
+
+  aboutInput.addEventListener('change', function () {
+    var file = aboutInput.files && aboutInput.files[0];
+    if (!file) return;
+    if (aboutObjectUrl) URL.revokeObjectURL(aboutObjectUrl);
+    aboutObjectUrl = URL.createObjectURL(file);
+    showAboutPreview(aboutObjectUrl, false);
+  });
+
+  document.getElementById('settings-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var hero = heroGallery.collect();
+    var strip = stripGallery.collect();
+    var values = [];
+    valuesEl.querySelectorAll('.card').forEach(function (card) {
+      var heading = (card.querySelector('.value-heading').value || '').trim();
+      var body = (card.querySelector('.value-body').value || '').trim();
+      if (!heading && !body) return;
+      var item = { heading: heading, body: body };
+      var idInput = card.querySelector('.value-id');
+      if (idInput) item.id = parseInt(idInput.value, 10);
+      values.push(item);
+    });
+    document.getElementById('gallery_json').value = JSON.stringify(hero.payload);
+    document.getElementById('strip_json').value = JSON.stringify(strip.payload);
+    document.getElementById('values_json').value = JSON.stringify(values);
+
+    var fd = new FormData(e.target);
+    hero.files.forEach(function (file) { fd.append('new_images', file); });
+    strip.files.forEach(function (file) { fd.append('strip_images', file); });
+
+    var btn = e.target.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    fetch(e.target.action, { method: 'POST', body: fd, redirect: 'follow' })
+      .then(function (res) {
+        window.location.href = res.url;
+      })
+      .catch(function () {
+        btn.disabled = false;
+        window.showAdminToast('Could not save — try again.', false);
+      });
+  });
+})();
+</script>
 {% endblock %}
