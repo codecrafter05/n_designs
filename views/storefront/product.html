@@ -116,23 +116,71 @@
     <div class="modal-head">
       <div>
         <h3 class="modal-title" id="sizeModalTitle">Size Guide</h3>
-        <div class="modal-sub">{{ product.name }} · Measurements in cm</div>
+        <div class="modal-sub">{{ product.name }}</div>
       </div>
       <button class="modal-close" id="sizeModalClose" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
-    <table class="size-table">
-      <thead>
-        <tr><th>Size</th><th>Bust</th><th>Waist</th><th>Length</th></tr>
-      </thead>
-      <tbody>
-        <tr><td>XS</td><td>—</td><td>—</td><td>—</td></tr>
-        <tr><td>S</td><td>—</td><td>—</td><td>—</td></tr>
-        <tr><td>M</td><td>—</td><td>—</td><td>—</td></tr>
-        <tr><td>L</td><td>—</td><td>—</td><td>—</td></tr>
-        <tr><td>XL</td><td>—</td><td>—</td><td>—</td></tr>
-      </tbody>
-    </table>
-    <p class="modal-foot">Measurements are body measurements, not garment measurements. Still unsure? <a href="{{ whatsapp_url }}" style="text-decoration:underline;">Ask us on WhatsApp</a>.</p>
+
+    <section class="size-guide-section">
+      <div class="size-guide-toolbar">
+        <h4 class="size-guide-heading">Dresses &amp; Jalabiyas</h4>
+        <div class="size-unit-toggle" role="group" aria-label="Measurement unit">
+          <button type="button" class="size-pill is-active" data-size-unit="cm">CM</button>
+          <button type="button" class="size-pill" data-size-unit="in">INCH</button>
+        </div>
+      </div>
+      <div class="size-table-wrap">
+        <table class="size-table">
+          <thead>
+            <tr>
+              <th>Size</th>
+              <th>UK</th>
+              <th>US</th>
+              <th>EU</th>
+              <th id="dressColChest">Chest (cm)</th>
+              <th id="dressColWaist">Waist (cm)</th>
+              <th id="dressColHips">Hips (cm)</th>
+            </tr>
+          </thead>
+          <tbody id="dressSizeBody"></tbody>
+        </table>
+      </div>
+      <p class="modal-foot">Measurements are body measurements, not garment measurements.</p>
+    </section>
+
+    <section class="size-guide-section">
+      <h4 class="size-guide-heading">Abayas</h4>
+      <div class="size-table-wrap">
+        <table class="size-table">
+          <thead>
+            <tr>
+              <th>Height (cm)</th>
+              <th>Height (feet)</th>
+              <th>Item Length</th>
+              <th>Sleeves</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>147</td><td>4.8</td><td>50"</td><td>26"</td></tr>
+            <tr><td>150</td><td>4.9</td><td>50"/52"</td><td>26"</td></tr>
+            <tr><td>153</td><td>5.0</td><td>52"</td><td>26.5"</td></tr>
+            <tr><td>156</td><td>5.1</td><td>52"/54"</td><td>26.5"</td></tr>
+            <tr><td>158</td><td>5.2</td><td>54"</td><td>27"</td></tr>
+            <tr><td>161</td><td>5.3</td><td>54"/56"</td><td>27"</td></tr>
+            <tr><td>164</td><td>5.4</td><td>56"</td><td>27.5"</td></tr>
+            <tr><td>167</td><td>5.5</td><td>56"/58"</td><td>27.5"</td></tr>
+            <tr><td>170</td><td>5.6</td><td>58"</td><td>28"</td></tr>
+            <tr><td>173</td><td>5.7</td><td>58"/60"</td><td>28"</td></tr>
+            <tr><td>176</td><td>5.8</td><td>60"</td><td>28.5"</td></tr>
+            <tr><td>179</td><td>5.9</td><td>60"/62"</td><td>28.5"</td></tr>
+            <tr><td>182</td><td>6.0</td><td>62"</td><td>29"</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="modal-foot">Measurements are for the abaya itself, not body measurements. If you plan to wear the abaya with heels, we recommend adding one to two inches extra.</p>
+    </section>
+
+    <p class="modal-foot">Still unsure? <a href="{{ whatsapp_url }}" style="text-decoration:underline;">Ask us on WhatsApp</a>.</p>
   </div>
 </div>
 {% endblock %}
@@ -258,6 +306,57 @@
         item.classList.add('is-open');
         panel.style.maxHeight = panel.scrollHeight + 'px';
       }
+    });
+  });
+
+  var DRESS_SIZES = [
+    { size: 'XS', uk: '4-6', us: '0-2', eu: '32-34', chest: [78.7, 81.3], waist: [61.0, 63.5], hips: [83.8, 86.4] },
+    { size: 'S', uk: '8-10', us: '4-6', eu: '36-38', chest: [83.8, 88.9], waist: [66.0, 71.1], hips: [88.9, 94.0] },
+    { size: 'M', uk: '12-14', us: '8-10', eu: '40-42', chest: [94.0, 99.1], waist: [76.2, 78.7], hips: [99.1, 104.1] },
+    { size: 'L', uk: '16-18', us: '12-14', eu: '44-46', chest: [104.1, 109.2], waist: [83.8, 91.4], hips: [109.2, 116.8] },
+    { size: 'XL', uk: '20-22', us: '16-18', eu: '48-50', chest: [116.8, 121.9], waist: [99.1, 104.1], hips: [124.5, 129.5] },
+    { size: 'XXL', uk: '24-26', us: '20-22', eu: '52-54', chest: [129.5, 137.2], waist: [111.8, 119.4], hips: [137.2, 144.8] },
+    { size: 'XXXL', uk: '28-30', us: '24-26', eu: '56-58', chest: [144.8, 149.9], waist: [127.0, 132.1], hips: [152.4, 157.5] },
+    { size: '4XL', uk: '32-34', us: '28-30', eu: '60-62', chest: [154.9, 162.6], waist: [139.7, 147.3], hips: [161.3, 166.4] }
+  ];
+
+  function formatMeasure(range, unit) {
+    if (unit === 'in') {
+      return (range[0] / 2.54).toFixed(1) + '-' + (range[1] / 2.54).toFixed(1);
+    }
+    return range[0].toFixed(1) + '-' + range[1].toFixed(1);
+  }
+
+  function renderDressTable(unit) {
+    var body = document.getElementById('dressSizeBody');
+    if (!body) return;
+    var suffix = unit === 'in' ? ' (in)' : ' (cm)';
+    document.getElementById('dressColChest').textContent = 'Chest' + suffix;
+    document.getElementById('dressColWaist').textContent = 'Waist' + suffix;
+    document.getElementById('dressColHips').textContent = 'Hips' + suffix;
+    body.replaceChildren();
+    DRESS_SIZES.forEach(function (row) {
+      var tr = document.createElement('tr');
+      [row.size, row.uk, row.us, row.eu,
+        formatMeasure(row.chest, unit),
+        formatMeasure(row.waist, unit),
+        formatMeasure(row.hips, unit)
+      ].forEach(function (value) {
+        var td = document.createElement('td');
+        td.textContent = value;
+        tr.appendChild(td);
+      });
+      body.appendChild(tr);
+    });
+    document.querySelectorAll('[data-size-unit]').forEach(function (btn) {
+      btn.classList.toggle('is-active', btn.getAttribute('data-size-unit') === unit);
+    });
+  }
+
+  renderDressTable('cm');
+  document.querySelectorAll('[data-size-unit]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      renderDressTable(btn.getAttribute('data-size-unit'));
     });
   });
 
