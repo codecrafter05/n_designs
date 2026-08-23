@@ -32,7 +32,7 @@ SMTP settings live in `.env` (`MAIL_*`, `ADMIN_NOTIFICATION_EMAIL`, `SITE_URL`).
 
 Admin section pages live directly under `/admin/{section}`, not `/admin/dashboard/{section}`. Only the dashboard home page itself is `/admin/dashboard`.
 
-Examples: `/admin/categories`, `/admin/categories/new`, `/admin/products`, `/admin/orders`, `/admin/discount-codes`, `/admin/customers`, `/admin/settings`. Login stays `/admin/login`.
+Examples: `/admin/categories`, `/admin/categories/new`, `/admin/products`, `/admin/orders`, `/admin/discount-codes`, `/admin/customers`, `/admin/settings`, `/admin/Terms`. Login stays `/admin/login`.
 
 ## Customers admin
 
@@ -51,3 +51,7 @@ When `applies_to_sale_items` is off, the percentage applies only to line items t
 `SiteSettings` is a singleton (`id = 1`, MySQL CHECK `id = 1`). Never insert another row — `get_or_create_site_settings()` locks and creates `id=1` on first save. `HeroSlide` rows are ordered by `sort_order`; zero slides keep the CSS fallback photo on `.hero-image`, one slide is static, two or more crossfade every 6s. Hero heading is plain admin text (no automatic italic on a word). Empty heading/body fields omit the tags rather than rendering blanks.
 
 About page remainder (value cards, quote, image strip) is also edited under **About Page** in `/admin/settings`. `AboutValue` numbers are derived from order (`01`, `02`, …), not stored. Zero value cards or an empty quote omit those sections. Zero strip images keep the four placeholder tones.
+
+## Legal pages (Terms)
+
+Terms copy lives in `legal_pages` (`slug = terms`): title + HTML body. Admin is `/admin/Terms` (`/admin/terms` is the same screen). Body is edited with Quill 1.3.7 (CDN; the Maxton kit has no rich-text plugin). Allowed tags after sanitize: `p h2 h3 ul ol li strong em b i u br a[href]`. Storefront `/terms` renders that HTML in a centered, justified column (no sidebar TOC). A first paragraph starting with “Last updated” sits under the title. Legacy plain-text rows are converted on read until the next save. Empty fields omit the tags. Do not fold this into `/admin/settings`.

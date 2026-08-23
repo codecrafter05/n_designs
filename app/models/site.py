@@ -7,6 +7,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
 
+TERMS_PAGE_SLUG = "terms"
 SETTINGS_ROW_ID = 1
 
 
@@ -55,6 +56,22 @@ class AboutValue(Base):
     sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc), nullable=False
+    )
+
+
+class LegalPage(Base):
+    """Storefront legal copy, one row per slug (terms, later privacy)."""
+
+    __tablename__ = "legal_pages"
+
+    slug: Mapped[str] = mapped_column(String(50), primary_key=True)
+    title: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    body: Mapped[str | None] = mapped_column(Text, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+        nullable=False,
     )
 
 

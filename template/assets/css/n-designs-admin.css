@@ -271,6 +271,28 @@ body {
   padding: .25rem;
 }
 
+/* Quill — match form-control charcoal */
+.ql-toolbar.ql-snow,
+.ql-container.ql-snow {
+  border-color: #dee2e6;
+}
+.ql-toolbar.ql-snow {
+  border-radius: .375rem .375rem 0 0;
+}
+.ql-container.ql-snow {
+  border-radius: 0 0 .375rem .375rem;
+  font-size: .95rem;
+}
+.ql-editor {
+  min-height: 320px;
+}
+.ql-container.ql-snow:focus-within {
+  border-color: var(--admin-ink);
+}
+.ql-snow .ql-stroke { stroke: var(--admin-ink); }
+.ql-snow .ql-fill { fill: var(--admin-ink); }
+.ql-snow .ql-picker { color: var(--admin-ink); }
+
 /* Products — layout only; cards/inputs/buttons come from Maxton + btn-admin-* */
 .prod-gallery-card { width: 140px; }
 .prod-gallery-card .img-preview { max-width: 100%; height: 110px; }
