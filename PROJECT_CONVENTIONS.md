@@ -52,9 +52,9 @@ When `applies_to_sale_items` is off, the percentage applies only to line items t
 
 About page remainder (value cards, quote, image strip) is also edited under **About Page** in `/admin/settings`. `AboutValue` numbers are derived from order (`01`, `02`, …), not stored. Zero value cards or an empty quote omit those sections. Zero strip images keep the four placeholder tones.
 
-## Size Guide (PDP)
+## Size Guide
 
-The Size Guide modal on `views/storefront/product.html` is **hardcoded** — the same two charts (Dresses & Jalabiyas, Abayas) show on every product. No admin screen and no database. Dress chest/waist/hips are stored in centimetres; INCH is `cm / 2.54` rounded to one decimal in JS at render time.
+The Size Guide modal is a shared storefront component (`views/storefront/components/size_guide_modal.html`), included from `base.html` and opened from any `[data-open-size-guide]` trigger (PDP buttons and the footer Help link). Markup and JS live once — `static/js/script.js` exposes `openSizeGuideModal()` / `closeSizeGuideModal()`. The two charts (Dresses & Jalabiyas, Abayas) are hardcoded for every page. No admin screen and no database. Dress chest/waist/hips are stored in centimetres; INCH is `cm / 2.54` rounded to one decimal in JS at render time.
 
 ## Legal pages (Terms)
 
