@@ -4,11 +4,21 @@
 {% block title %}N Designs — Abayas, Jalabiyas &amp; Occasion Dresses{% endblock %}
 
 {% block content %}
-<section class="hero">
+<section class="hero{% if hero_slides|length > 1 %} is-slideshow{% endif %}">
+  {% if hero_slides %}
+    {% for slide in hero_slides %}
+    <div class="hero-image{% if hero_slides|length > 1 %} hero-slide{% if loop.first %} is-active{% endif %}{% endif %}"
+         style="background-image:url('{{ slide.image_url }}')" aria-hidden="true"></div>
+    {% endfor %}
+  {% else %}
+  {# Fallback: existing hardcoded photo in .hero-image CSS when no slides are uploaded. #}
   <div class="hero-image" aria-hidden="true"></div>
+  {% endif %}
+  {% if hero_heading_lines %}
   <div class="hero-content">
-    <h1 class="hero-title">Quiet<br><em>elegance,</em><br>worn daily.</h1>
+    <h1 class="hero-title">{% for line in hero_heading_lines %}{{ line }}{% if not loop.last %}<br>{% endif %}{% endfor %}</h1>
   </div>
+  {% endif %}
   <div class="hero-scroll"><span class="line"></span> Scroll</div>
 </section>
 
@@ -157,4 +167,40 @@
     </form>
   </div>
 </section>
+{% endblock %}
+
+{% block extra_js %}
+{% if hero_slides|length > 1 %}
+<script>
+(function () {
+  var slides = document.querySelectorAll('.hero-slide');
+  if (slides.length < 2) return;
+  var index = 0;
+  var timer = null;
+  var hero = document.querySelector('.hero.is-slideshow');
+  function show(next) {
+    slides[index].classList.remove('is-active');
+    index = next;
+    slides[index].classList.add('is-active');
+  }
+  function tick() {
+    show((index + 1) % slides.length);
+  }
+  function start() {
+    if (timer) return;
+    timer = setInterval(tick, 6000);
+  }
+  function stop() {
+    if (!timer) return;
+    clearInterval(timer);
+    timer = null;
+  }
+  start();
+  if (hero) {
+    hero.addEventListener('mouseenter', stop);
+    hero.addEventListener('mouseleave', start);
+  }
+})();
+</script>
+{% endif %}
 {% endblock %}

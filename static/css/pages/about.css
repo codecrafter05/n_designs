@@ -4,6 +4,7 @@
 .about-hero .ph{aspect-ratio:4/5;}
 .about-hero h1{font-size:clamp(32px,4vw,52px);line-height:1.1;margin:14px 0 22px;}
 .about-hero p{color:var(--ink-70);font-size:14.5px;line-height:1.85;max-width:46ch;}
+.about-hero p + p{margin-top:16px;}
 
 .about-values{
   display:grid;grid-template-columns:repeat(3,1fr);gap:2px;overflow:hidden;margin-top:96px;
@@ -30,6 +31,6 @@
 
 @media (max-width:820px){
   .about-hero{grid-template-columns:1fr;gap:32px;}
-  .about-values{grid-template-columns:1fr;}
-  .about-strip{grid-template-columns:repeat(2,1fr);}
+  .about-values{grid-template-columns:1fr !important;}
+  .about-strip{grid-template-columns:repeat(2,1fr) !important;}
 }

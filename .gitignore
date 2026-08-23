@@ -12,3 +12,7 @@ static/uploads/categories/*
 !static/uploads/categories/.gitkeep
 static/uploads/products/*
 !static/uploads/products/.gitkeep
+static/uploads/hero/*
+!static/uploads/hero/.gitkeep
+static/uploads/about/*
+!static/uploads/about/.gitkeep

@@ -32,7 +32,7 @@ SMTP settings live in `.env` (`MAIL_*`, `ADMIN_NOTIFICATION_EMAIL`, `SITE_URL`).
 
 Admin section pages live directly under `/admin/{section}`, not `/admin/dashboard/{section}`. Only the dashboard home page itself is `/admin/dashboard`.
 
-Examples: `/admin/categories`, `/admin/categories/new`, `/admin/products`, `/admin/orders`, `/admin/discount-codes`, `/admin/customers`, `/admin/settings`. Login stays `/admin/login`.
+Examples: `/admin/categories`, `/admin/categories/new`, `/admin/products`, `/admin/orders`, `/admin/discount-codes`, `/admin/customers`, `/admin/settings`, `/admin/Terms`. Login stays `/admin/login`.
 
 ## Customers admin
 
@@ -45,3 +45,13 @@ Codes are stored uppercase; `summer20` and `SUMMER20` are the same code. There i
 A code applied on the cart is stored as `Cart.discount_code_id` and carries into checkout automatically. On the Order, `discount_code_id` remains the live FK and `discount_code_snapshot` stores the code string used at checkout (same idea as `price_at_purchase`). Historical order screens and emails display the snapshot, not the current DiscountCode code. Invalid / inactive / maxed-out codes get a generic storefront toast: **“This code is invalid or has expired”** — do not reveal why (max uses, inactive, unknown). If a code becomes invalid between apply and submit, checkout removes it, recalculates without it, and asks the customer to review the total rather than placing the order.
 
 When `applies_to_sale_items` is off, the percentage applies only to line items that are not on sale (`compare_at_price` is missing or not lower than `price`). Sale-line payables stay at the sale price. Shipping is added after the discount.
+
+## Site settings (homepage hero + About intro)
+
+`SiteSettings` is a singleton (`id = 1`, MySQL CHECK `id = 1`). Never insert another row — `get_or_create_site_settings()` locks and creates `id=1` on first save. `HeroSlide` rows are ordered by `sort_order`; zero slides keep the CSS fallback photo on `.hero-image`, one slide is static, two or more crossfade every 6s. Hero heading is plain admin text (no automatic italic on a word). Empty heading/body fields omit the tags rather than rendering blanks.
+
+About page remainder (value cards, quote, image strip) is also edited under **About Page** in `/admin/settings`. `AboutValue` numbers are derived from order (`01`, `02`, …), not stored. Zero value cards or an empty quote omit those sections. Zero strip images keep the four placeholder tones.
+
+## Legal pages (Terms)
+
+Terms copy lives in `legal_pages` (`slug = terms`): title + HTML body. Admin is `/admin/Terms` (`/admin/terms` is the same screen). Body is edited with Quill 1.3.7 (CDN; the Maxton kit has no rich-text plugin). Allowed tags after sanitize: `p h2 h3 ul ol li strong em b i u br a[href]`. Storefront `/terms` renders that HTML in a centered, justified column (no sidebar TOC). A first paragraph starting with “Last updated” sits under the title. Legacy plain-text rows are converted on read until the next save. Empty fields omit the tags. Do not fold this into `/admin/settings`.
