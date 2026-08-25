@@ -21,7 +21,7 @@
 .sale-page{padding-bottom:100px;}
 .prods-layout{display:grid;grid-template-columns:220px 1fr;gap:48px;padding-bottom:100px;}
 .filters h4{
-  font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-70);
+  font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-70);
   margin-bottom:14px;
 }
 .filter-group{margin-bottom:32px;}

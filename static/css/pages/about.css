@@ -21,8 +21,8 @@
   padding:110px 0;text-align:center;background:var(--ink);color:var(--on-dark);margin-top:96px;
 }
 .about-quote blockquote{
-  font-family:var(--serif);font-style:italic;font-size:clamp(24px,3.4vw,40px);
-  max-width:20ch;margin:0 auto;line-height:1.35;
+  font-family:var(--serif);font-style:normal;font-weight:400;font-size:clamp(24px,3.4vw,40px);
+  max-width:20ch;margin:0 auto;line-height:1.35;letter-spacing:.02em;
 }
 .about-quote cite{display:block;margin-top:26px;font-style:normal;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--on-dark-60);}
 

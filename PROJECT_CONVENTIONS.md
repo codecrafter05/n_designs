@@ -2,6 +2,10 @@
 
 This file records standing decisions made during development that are not obvious from the code alone. Check it before starting new UI work, and add a note here whenever a similar decision is made.
 
+## Storefront typeface
+
+The public storefront uses a single self-hosted face, **Glacial Indifference** (OFL), Regular 400 and Bold 700 only — no italic, no light/medium. Files live in `static/fonts/` and are declared in `static/css/style.css`. `--serif` and `--sans` both resolve to it. Do not pull Fraunces or Inter from Google Fonts on storefront pages. Admin (`/admin`, Maxton / Noto Sans) is separate and must not be switched to this font.
+
 ## UI/UX conventions
 
 **Never use native browser dialogs.** Do not use `confirm()`, `alert()`, or `prompt()` anywhere in this project — admin or storefront. Any confirmation, warning, or input request must be a custom-styled in-app modal or toast that matches the current page's theme (Semi Dark charcoal for admin, the N Designs brand theme for storefront). This applies to all future features, not just category delete — if a future action (deleting a product, cancelling an order, etc.) needs user confirmation, reuse or extend the existing `confirm-modal.html` / `confirmAction()` helper in the admin, or build an equivalent for the storefront if one doesn't exist yet, rather than falling back to a native dialog.
