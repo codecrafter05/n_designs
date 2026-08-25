@@ -516,6 +516,16 @@ table.size-table{width:100%;border-collapse:collapse;font-size:13px;min-width:52
 .btn-ghost:hover{background:var(--ink);color:var(--on-dark);}
 .btn-block{width:100%;}
 
+/* Honeypot: off-screen text input (not type=hidden) so bots fill it, people never see it. */
+.hp-field{
+  position:absolute;
+  left:-10000px;
+  top:auto;
+  width:1px;
+  height:1px;
+  overflow:hidden;
+}
+
 .phone-join{
   display:flex;align-items:stretch;border:1px solid var(--line);background:var(--white);
 }

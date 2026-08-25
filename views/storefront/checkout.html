@@ -1,7 +1,7 @@
 {% extends "storefront/base.html" %}
 {% set nav_variant = "solid" %}
 
-{% block title %}Checkout — N Designs{% endblock %}
+{% block title %}Checkout — By N Designs{% endblock %}
 
 {% block page_css %}<link rel="stylesheet" href="/static/css/pages/checkout.css">{% endblock %}
 
@@ -13,6 +13,7 @@
 
   <form class="co-layout" method="post" action="/checkout" id="checkoutForm">
     <div>
+      {% include "storefront/components/honeypot.html" %}
       <fieldset>
         <legend>Contact</legend>
         <div class="field-row">
@@ -400,7 +401,7 @@
 
   var DRAFT_KEY = 'nd_checkout_draft';
   var DRAFT_FIELDS = ['email', 'first_name', 'last_name', 'address', 'city', 'country'];
-  var SKIP_SAVE = { account_password: true, payment_method: true, create_account: true };
+  var SKIP_SAVE = { account_password: true, payment_method: true, create_account: true, website_url: true };
 
   function readDraft() {
     try {

@@ -16,6 +16,12 @@ from app.core.config import Settings, settings
 from app.core.customer_auth import create_customer_session, get_current_customer
 from app.core.database import get_db
 from app.core.discounts import REMOVED_AT_CHECKOUT, cart_pricing
+from app.core.form_protection import (
+    RATE_LIMIT_MESSAGE,
+    honeypot_filled,
+    is_rate_limited,
+    silent_reject,
+)
 from app.core.security import hash_password
 from app.core.orders import (
     PAYMENT_COD,
@@ -852,6 +858,7 @@ def storefront_checkout_submit(
     payment_method: str = Form("cod"),
     create_account: str = Form(""),
     account_password: str = Form(""),
+    website_url: str = Form(""),
 ):
     names = country_names(load_country_groups(db))
     form = _checkout_form(
@@ -877,6 +884,11 @@ def storefront_checkout_submit(
             error=message,
             create_account=want_account,
         )
+
+    if honeypot_filled(website_url):
+        return silent_reject(request)
+    if is_rate_limited(request, "/checkout"):
+        return fail(RATE_LIMIT_MESSAGE)
 
     missing = [
         label

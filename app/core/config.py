@@ -44,7 +44,7 @@ class Settings(BaseSettings):
     MAIL_PASSWORD: str = ""
     MAIL_ENCRYPTION: str = "ssl"
     MAIL_FROM_ADDRESS: str = ""
-    MAIL_FROM_NAME: str = "N Designs"
+    MAIL_FROM_NAME: str = "By N Designs"
     ADMIN_NOTIFICATION_EMAIL: str = ""
     SITE_URL: str = "http://127.0.0.1:8000"
     TAP_SECRET_KEY: str = ""

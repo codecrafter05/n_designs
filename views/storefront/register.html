@@ -1,7 +1,7 @@
 {% extends "storefront/base.html" %}
 {% set nav_variant = "solid" %}
 
-{% block title %}Create account — N Designs{% endblock %}
+{% block title %}Create account — By N Designs{% endblock %}
 
 {% block page_css %}<link rel="stylesheet" href="/static/css/pages/account.css">{% endblock %}
 
@@ -12,6 +12,7 @@
     <p class="auth-lead">Save your details for next time. Guest orders stay with you if you use the same email.</p>
     <form method="post" action="/register" id="registerForm">
       {% if next_path %}<input type="hidden" name="next" value="{{ next_path }}">{% endif %}
+      {% include "storefront/components/honeypot.html" %}
       <div class="field">
         <label for="name">Name</label>
         <input id="name" name="name" type="text" required value="{{ form.name }}">
@@ -30,6 +31,11 @@
       <div class="field">
         <label for="confirm_password">Confirm password</label>
         <input id="confirm_password" name="confirm_password" type="password" required minlength="8">
+      </div>
+      <input type="hidden" name="captcha_token" value="{{ captcha.token }}">
+      <div class="field">
+        <label for="captcha_answer">{{ captcha.question }}</label>
+        <input id="captcha_answer" name="captcha_answer" type="number" inputmode="numeric" autocomplete="off">
       </div>
       <button class="btn btn-primary btn-block" type="submit">Create account</button>
     </form>
