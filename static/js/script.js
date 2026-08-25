@@ -221,9 +221,31 @@
     if (form) {
       form.addEventListener('submit', syncHidden);
     }
+    group.addEventListener('nd-phone-refresh', function () {
+      var parsed = parseDialPhone(hidden.value, dialCodes);
+      if (parsed.code === null) {
+        if (country) applyCountry();
+        else {
+          dial.value = fallback;
+          local.value = '';
+        }
+      } else {
+        dial.value = parsed.code;
+        if (!dial.value) dial.value = fallback;
+        local.value = parsed.local;
+      }
+      syncHidden();
+    });
   }
 
   document.querySelectorAll('[data-phone-group]').forEach(bindPhoneGroup);
+})();
+
+(function () {
+  var KEY = 'nd_checkout_draft';
+  window.clearCheckoutDraft = function () {
+    try { localStorage.removeItem(KEY); } catch (e) {}
+  };
 })();
 
 (function(){

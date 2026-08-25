@@ -397,6 +397,88 @@
   if (countrySelect) {
     countrySelect.addEventListener('change', refreshShipping);
   }
+
+  var DRAFT_KEY = 'nd_checkout_draft';
+  var DRAFT_FIELDS = ['email', 'first_name', 'last_name', 'address', 'city', 'country'];
+  var SKIP_SAVE = { account_password: true, payment_method: true, create_account: true };
+
+  function readDraft() {
+    try {
+      var raw = localStorage.getItem(DRAFT_KEY);
+      if (!raw) return null;
+      var data = JSON.parse(raw);
+      return data && typeof data === 'object' ? data : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function writeDraft(data) {
+    try {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
+    } catch (e) {}
+  }
+
+  function collectDraft() {
+    if (!form) return null;
+    var phone = form.querySelector('[data-phone-full]');
+    return {
+      email: (form.email && form.email.value) || '',
+      first_name: (form.first_name && form.first_name.value) || '',
+      last_name: (form.last_name && form.last_name.value) || '',
+      address: (form.address && form.address.value) || '',
+      city: (form.city && form.city.value) || '',
+      country: (form.country && form.country.value) || '',
+      phone: phone ? phone.value : ''
+    };
+  }
+
+  function draftHasValue(data) {
+    if (!data) return false;
+    return DRAFT_FIELDS.concat(['phone']).some(function (key) {
+      return String(data[key] || '').trim();
+    });
+  }
+
+  function restoreDraft(data) {
+    if (!form || !data) return;
+    DRAFT_FIELDS.forEach(function (name) {
+      var el = form.elements[name];
+      if (!el || data[name] == null) return;
+      if (name === 'country') {
+        var match = Array.from(el.options).some(function (opt) { return opt.value === data[name]; });
+        if (!match) return;
+      }
+      el.value = data[name];
+    });
+    var group = form.querySelector('[data-phone-group]');
+    var hidden = group ? group.querySelector('[data-phone-full]') : null;
+    if (hidden && data.phone != null) {
+      hidden.value = data.phone;
+      group.dispatchEvent(new Event('nd-phone-refresh'));
+    }
+    if (countrySelect) {
+      countrySelect.dispatchEvent(new Event('change'));
+    }
+  }
+
+  if (form && !loggedIn) {
+    var saved = readDraft();
+    if (draftHasValue(saved)) restoreDraft(saved);
+    var saveTimer = null;
+    form.addEventListener('input', function (e) {
+      var t = e.target;
+      if (!t || SKIP_SAVE[t.name] || t.id === 'promoInput') return;
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(function () { writeDraft(collectDraft()); }, 500);
+    });
+    form.addEventListener('change', function (e) {
+      var t = e.target;
+      if (!t || SKIP_SAVE[t.name] || t.id === 'promoInput') return;
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(function () { writeDraft(collectDraft()); }, 500);
+    });
+  }
 })();
 </script>
 {% endblock %}
