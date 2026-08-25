@@ -385,6 +385,7 @@ async def products_create(
     category_id: str = Form(...),
     is_active: str | None = Form(None),
     is_featured: str | None = Form(None),
+    weight_kg: str = Form(""),
     inventory_json: str = Form(...),
     gallery_json: str = Form("[]"),
     new_images: list[UploadFile] | None = File(None),
@@ -398,6 +399,7 @@ async def products_create(
         category_id=category_id,
         is_active=is_active,
         is_featured=is_featured,
+        weight_kg=weight_kg,
         inventory_json=inventory_json,
         gallery_json=gallery_json,
         new_images=new_images,
@@ -428,6 +430,7 @@ async def products_update(
     category_id: str = Form(...),
     is_active: str | None = Form(None),
     is_featured: str | None = Form(None),
+    weight_kg: str = Form(""),
     inventory_json: str = Form(...),
     gallery_json: str = Form("[]"),
     new_images: list[UploadFile] | None = File(None),
@@ -444,6 +447,7 @@ async def products_update(
         category_id=category_id,
         is_active=is_active,
         is_featured=is_featured,
+        weight_kg=weight_kg,
         inventory_json=inventory_json,
         gallery_json=gallery_json,
         new_images=new_images,
@@ -510,6 +514,19 @@ def _load_product(db: Session, product_id: int) -> Product | None:
     )
 
 
+def _parse_weight(raw: str) -> Decimal | None:
+    text = (raw or "").strip()
+    if not text:
+        return None
+    try:
+        value = Decimal(text)
+    except (InvalidOperation, ValueError) as exc:
+        raise ValueError("Weight must be a number.") from exc
+    if value < 0:
+        raise ValueError("Weight cannot be negative.")
+    return value.quantize(Decimal("0.001"))
+
+
 async def _save_product(
     db: Session,
     *,
@@ -519,6 +536,7 @@ async def _save_product(
     category_id: str,
     is_active: str | None,
     is_featured: str | None,
+    weight_kg: str,
     inventory_json: str,
     gallery_json: str,
     new_images: list[UploadFile],
@@ -531,6 +549,7 @@ async def _save_product(
         resolved_category = _require_subcategory(db, int(category_id))
         colors_data = _parse_inventory(inventory_json)
         gallery_items = _parse_gallery(gallery_json)
+        weight = _parse_weight(weight_kg)
     except (ValueError, TypeError) as exc:
         return _redirect(error_path, error=str(exc))
 
@@ -554,6 +573,7 @@ async def _save_product(
                 base_price=Decimal("0.000"),
                 is_active=is_active == "1",
                 is_featured=is_featured == "1",
+                weight_kg=weight,
             )
             db.add(product)
             db.flush()
@@ -564,6 +584,7 @@ async def _save_product(
             product.category_id = resolved_category.id
             product.is_active = is_active == "1"
             product.is_featured = is_featured == "1"
+            product.weight_kg = weight
 
         min_price = _sync_inventory(db, product, colors_data)
         product.base_price = min_price

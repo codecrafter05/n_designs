@@ -2,6 +2,10 @@
 
 This file records standing decisions made during development that are not obvious from the code alone. Check it before starting new UI work, and add a note here whenever a similar decision is made.
 
+## Storefront typeface
+
+The public storefront uses a single self-hosted face, **Glacial Indifference** (OFL), Regular 400 and Bold 700 only — no italic, no light/medium. Files live in `static/fonts/` and are declared in `static/css/style.css`. `--serif` and `--sans` both resolve to it. Do not pull Fraunces or Inter from Google Fonts on storefront pages. Admin (`/admin`, Maxton / Noto Sans) is separate and must not be switched to this font.
+
 ## UI/UX conventions
 
 **Never use native browser dialogs.** Do not use `confirm()`, `alert()`, or `prompt()` anywhere in this project — admin or storefront. Any confirmation, warning, or input request must be a custom-styled in-app modal or toast that matches the current page's theme (Semi Dark charcoal for admin, the N Designs brand theme for storefront). This applies to all future features, not just category delete — if a future action (deleting a product, cancelling an order, etc.) needs user confirmation, reuse or extend the existing `confirm-modal.html` / `confirmAction()` helper in the admin, or build an equivalent for the storefront if one doesn't exist yet, rather than falling back to a native dialog.
@@ -18,9 +22,17 @@ Approved references: Categories list/form (`views/admin/category/`), Maxton `for
 
 `ProductVariant.price` is the regular price. `ProductVariant.compare_at_price` is the optional discounted selling price (UI label: **Discount**; column name unchanged). A variant is on sale when `compare_at_price IS NOT NULL AND compare_at_price < price`. When on sale, `compare_at_price` is what the customer pays and `price` is shown struck through. When the discount field is empty, `price` is the payable price.
 
-## Checkout (COD MVP)
+## Checkout
 
-Checkout is `POST /checkout` in one DB transaction via shared `finalize_order()`: find-or-create Customer by email, create Order + OrderItems, apply a cart-level discount code if still valid (increment `DiscountCode.times_used`), decrement `ProductVariant.stock_quantity`, then delete `CartItem` rows and clear `Cart.discount_code_id` (the `Cart` row and `cart_session` cookie stay). After commit, order confirmation and admin new-order emails are queued with FastAPI `BackgroundTasks` — SMTP failure is logged server-side and never rolls back or blocks the order. Shipping is a flat **BHD 3.000** placeholder until real rates exist.
+Checkout is `POST /checkout` in one DB transaction via shared `finalize_order()`: find-or-create Customer by email, create Order + OrderItems, apply a cart-level discount code if still valid (increment `DiscountCode.times_used`), decrement `ProductVariant.stock_quantity`, then delete `CartItem` rows and clear `Cart.discount_code_id` (the `Cart` row and `cart_session` cookie stay). After commit, order confirmation and admin new-order emails are queued with FastAPI `BackgroundTasks` — SMTP failure is logged server-side and never rolls back or blocks the order.
+
+**Shipping** is weight-based and admin-configured under **Delivery Prices** (`/admin/delivery-prices`). Countries that share rates live in a `DeliveryGroup` (the label is admin-only; a group may have one country or several). Each group has ordered “up to X kg costs Y” tiers plus a `handling_fee` added once per order. Bahrain’s flat 3.000 is the same system: one tier at max_weight_kg 9999. `calculate_shipping()` is the single source of truth; checkout live-recalcs via `GET /checkout/shipping`, and `finalize_order()` recomputes again — never trust a client-supplied shipping amount. Cart weight is `sum(product.weight_kg * qty)`; **NULL weight counts as 0** (orders can undercharge until every product has a weight). Destinations with zero tiers (Australia / Malaysia until rates are filled in) show “Shipping to this destination isn't available yet — please contact us on WhatsApp” and Place Order is disabled. Weight above the last tier extrapolates from the last two tiers’ marginal per-kg rate (or `price/max_weight_kg` when there is only one tier).
+
+Storefront Country `<select>`s are a flat A–Z list of `DeliveryGroupCountry` names at render time (no group headings). Adding, renaming, or removing a country in **Delivery Prices** is reflected on checkout, account-edit, and the phone dial list on the next page load — there is no hardcoded country list to keep in sync. Destinations with zero tiers still appear in the dropdown; Place Order is disabled until rates exist. Phone prefixes are resolved from the live country name (plus common aliases such as USA → +1) so a rename does not desync the dial `<select>`.
+
+Guest checkout drafts contact/shipping fields to `localStorage` key `nd_checkout_draft` (debounced 500ms): email, first name, last name, address, city, country, composed phone. Password and payment method are never stored. The draft is cleared on the order-confirmation page after a successful order (COD or Tap). Logged-in checkout always uses the account profile from the server and does not restore a leftover draft.
+
+A Delivery Prices group can be turned **Inactive** from the admin list (same switch + POST toggle as Products). Inactive groups stay in the admin with their countries, tiers, and handling fee untouched. Checkout’s country list and `calculate_shipping()` ignore them until reactivated (inactive destinations use the same “contact us on WhatsApp” block as a group with no tiers).
 
 **Cash on Delivery** still finalizes immediately on submit. **Pay Online** creates a `PaymentSession` snapshot (cart lines, totals, customer, discount) and redirects to Tap’s hosted page (`source: src_all`). Stock, cart, and discount usage are not touched until Tap’s charge is `CAPTURED` and verified server-to-server on `GET /payment/callback/{token}`. Failed/abandoned payments leave the cart intact. The displayed payment method on those orders is `Card (Tap)`; `Order.tap_charge_id` is stored for admin/refund lookup. `TAP_SECRET_KEY` lives in `.env` and is never logged. `GET /order-confirmation/{order_id}` requires the owning customer to be logged in when `customer_id` is set; true guest orders (`customer_id` NULL) remain reachable by URL.
 
@@ -32,7 +44,7 @@ SMTP settings live in `.env` (`MAIL_*`, `ADMIN_NOTIFICATION_EMAIL`, `SITE_URL`).
 
 Admin section pages live directly under `/admin/{section}`, not `/admin/dashboard/{section}`. Only the dashboard home page itself is `/admin/dashboard`.
 
-Examples: `/admin/categories`, `/admin/categories/new`, `/admin/products`, `/admin/orders`, `/admin/discount-codes`, `/admin/customers`, `/admin/settings`, `/admin/Terms`. Login stays `/admin/login`.
+Examples: `/admin/categories`, `/admin/categories/new`, `/admin/products`, `/admin/orders`, `/admin/discount-codes`, `/admin/delivery-prices`, `/admin/customers`, `/admin/settings`, `/admin/Terms`. Login stays `/admin/login`.
 
 ## Customers admin
 

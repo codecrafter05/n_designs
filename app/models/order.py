@@ -27,6 +27,9 @@ class Order(Base):
     )
     status: Mapped[str] = mapped_column(String(50), default="pending", nullable=False)
     total: Mapped[float] = mapped_column(Numeric(12, 3), nullable=False)
+    shipping_amount: Mapped[float | None] = mapped_column(
+        Numeric(12, 3), nullable=True
+    )
     shipping_address: Mapped[str] = mapped_column(Text, nullable=False)
     payment_method: Mapped[str] = mapped_column(String(100), nullable=False)
     discount_code_id: Mapped[int | None] = mapped_column(

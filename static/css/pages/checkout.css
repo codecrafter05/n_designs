@@ -2,7 +2,7 @@
   display:flex;gap:10px;align-items:center;padding:30px 0 8px;font-size:11px;
   letter-spacing:.1em;text-transform:uppercase;color:var(--ink-45);
 }
-.co-steps .active{color:var(--ink);font-weight:600;}
+.co-steps .active{color:var(--ink);font-weight:700;}
 .co-steps .sep{opacity:.4;}
 .co-header{padding:36px 0 8px;}
 .co-header h1{font-size:clamp(28px,3.4vw,42px);}
@@ -10,7 +10,7 @@
 
 fieldset{border:0;padding:0;margin:0 0 40px;}
 legend{
-  font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-70);
+  font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-70);
   margin-bottom:18px;padding:0;
 }
 .field-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
@@ -91,6 +91,11 @@ legend{
   background:none;border:0;padding:0;margin-left:8px;font-size:11px;letter-spacing:.08em;
   text-transform:uppercase;color:var(--ink-45);text-decoration:underline;text-underline-offset:3px;
 }
+.shipping-note{
+  font-size:13px;color:var(--ink-70);line-height:1.6;margin:0 0 12px;
+}
+.shipping-note[hidden]{display:none;}
+#placeOrder:disabled{opacity:.45;cursor:not-allowed;}
 
 @media (max-width:900px){
   .co-layout{grid-template-columns:1fr;}

@@ -3,11 +3,24 @@
    Palette derived from the brand mark: warm black ink, ivory
    paper, taupe stone, and a restrained bronze accent used only
    for hairlines / hover states — never as a loud CTA colour.
-   Display face: Fraunces (echoes the logo's ligature curves).
-   Body/UI face: Inter, tracked-out uppercase for labels.
+   Single storefront face: self-hosted Glacial Indifference
+   (Regular 400 + Bold 700). Headings and body share it.
    ============================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;1,9..144,400&family=Inter:wght@300;400;500;600&display=swap');
+@font-face {
+  font-family: 'Glacial Indifference';
+  src: url('/static/fonts/GlacialIndifference-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Glacial Indifference';
+  src: url('/static/fonts/GlacialIndifference-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
 
 :root{
   --ink:        #131210;
@@ -24,8 +37,8 @@
   --on-dark:    #F3EFE3;
   --on-dark-60: rgba(243,239,227,.6);
 
-  --serif: 'Fraunces', 'Georgia', serif;
-  --sans:  'Inter', -apple-system, 'Segoe UI', sans-serif;
+  --serif: 'Glacial Indifference', -apple-system, sans-serif;
+  --sans:  'Glacial Indifference', -apple-system, sans-serif;
 
   --wrap: 1360px;
   --gutter: clamp(20px, 4vw, 64px);
@@ -52,7 +65,7 @@ button{font:inherit;cursor:pointer;}
 .eyebrow{
   font-family:var(--sans);
   font-size:11px;
-  font-weight:600;
+  font-weight:700;
   letter-spacing:.22em;
   text-transform:uppercase;
   color:var(--ink-45);
@@ -84,7 +97,7 @@ h1,h2,h3{font-family:var(--serif);font-weight:400;margin:0;letter-spacing:-.01em
 .nav-side{display:flex;align-items:center;gap:26px;flex:1;}
 .nav-side.right{justify-content:flex-end;}
 .nav-link{
-  font-size:11px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;
+  font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
   color:var(--ink);opacity:.8;position:relative;padding-bottom:2px;
 }
 .nav.on-hero .nav-link,
@@ -104,7 +117,7 @@ h1,h2,h3{font-family:var(--serif);font-weight:400;margin:0;letter-spacing:-.01em
 .cart-badge{
   position:absolute;top:-4px;right:-6px;min-width:16px;height:16px;padding:0 4px;
   border-radius:99px;background:var(--ink);color:var(--on-dark);
-  font-size:9px;font-weight:600;letter-spacing:0;line-height:16px;text-align:center;
+  font-size:9px;font-weight:700;letter-spacing:0;line-height:16px;text-align:center;
 }
 .nav.on-hero .cart-badge{background:var(--on-dark);color:var(--ink);}
 .cart-badge.is-pulse{animation:cartPulse .45s var(--ease);}
@@ -129,7 +142,7 @@ h1,h2,h3{font-family:var(--serif);font-weight:400;margin:0;letter-spacing:-.01em
 .sf-toast.is-open{opacity:1;transform:translateY(0);pointer-events:auto;}
 .sf-toast-action{
   background:none;border:0;color:var(--stone);font:inherit;font-size:11px;
-  font-weight:600;letter-spacing:.14em;text-transform:uppercase;white-space:nowrap;
+  font-weight:700;letter-spacing:.14em;text-transform:uppercase;white-space:nowrap;
 }
 .btn:disabled{opacity:.38;cursor:not-allowed;pointer-events:none;}
 .nav-menu-btn{display:none;}
@@ -159,7 +172,7 @@ h1,h2,h3{font-family:var(--serif);font-weight:400;margin:0;letter-spacing:-.01em
 .nav-drawer-head img{height:22px;width:auto;}
 .nav-drawer-links a{
   display:block;
-  font-size:13px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;
+  font-size:13px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
   padding:16px 0;border-bottom:1px solid var(--line-soft);
   color:var(--ink);opacity:.85;
 }
@@ -206,10 +219,12 @@ body.nav-open{overflow:hidden;}
 .hero-title{
   color:var(--on-dark);
   font-size:clamp(42px,8vw,108px);
-  line-height:.94;
-  max-width:11ch;
+  line-height:.98;
+  max-width:12ch;
+  letter-spacing:.01em;
+  font-weight:400;
 }
-.hero-title em{font-style:italic;color:var(--stone);}
+.hero-title em{font-style:normal;font-weight:400;color:var(--stone);letter-spacing:.04em;}
 .hero-sub{
   color:var(--on-dark-60);
   max-width:260px;font-size:13.5px;line-height:1.7;
@@ -235,7 +250,7 @@ body.nav-open{overflow:hidden;}
 }
 .section-title{font-size:clamp(28px,3.2vw,42px);}
 .text-link{
-  font-size:11px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;
+  font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
   display:inline-flex;align-items:center;gap:8px;border-bottom:1px solid var(--ink-45);
   padding-bottom:3px;transition:border-color .3s,gap .3s;
 }
@@ -349,7 +364,7 @@ body.nav-open{overflow:hidden;}
 }
 .band-form input::placeholder{color:var(--ink-45);}
 .band-form button{
-  background:none;border:0;font-size:11px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;
+  background:none;border:0;font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
   padding:12px 6px;white-space:nowrap;
 }
 
@@ -371,7 +386,7 @@ body.nav-open{overflow:hidden;}
 .footer-social a:hover{border-color:var(--on-dark);background:rgba(243,239,227,.06);}
 .footer-social svg{width:14px;height:14px;stroke:var(--on-dark);}
 .footer-col h4{
-  font-family:var(--sans);font-size:11px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;
+  font-family:var(--sans);font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
   color:var(--on-dark-60);margin-bottom:18px;
 }
 .footer-col ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:11px;}
@@ -385,7 +400,7 @@ body.nav-open{overflow:hidden;}
   text-align:center;
 }
 .footer-wordmark .scroll{
-  font-family:var(--serif);font-weight:300;font-style:italic;
+  font-family:var(--serif);font-weight:400;
   font-size:clamp(56px,12vw,160px);white-space:nowrap;color:transparent;
   -webkit-text-stroke:1px rgba(243,239,227,.5);
   line-height:1;letter-spacing:-.01em;
@@ -472,7 +487,7 @@ body.nav-open{overflow:hidden;}
 .size-unit-toggle .size-pill{
   min-width:56px;height:36px;padding:0 12px;border:1px solid var(--line);
   display:flex;align-items:center;justify-content:center;
-  letter-spacing:.08em;font-size:11px;font-weight:600;
+  letter-spacing:.08em;font-size:11px;font-weight:700;
   background:var(--white);color:var(--ink);
   transition:border-color .2s,background .2s,color .2s;
 }
@@ -484,7 +499,7 @@ table.size-table{width:100%;border-collapse:collapse;font-size:13px;min-width:52
   text-align:start;padding:11px 8px;border-bottom:1px solid var(--line);white-space:nowrap;
 }
 .size-table th{
-  font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-45);font-weight:600;
+  font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-45);font-weight:700;
 }
 .size-table tr:last-child td{border-bottom:0;}
 .modal-foot{margin-top:16px;font-size:12px;color:var(--ink-45);line-height:1.6;}
@@ -492,7 +507,7 @@ table.size-table{width:100%;border-collapse:collapse;font-size:13px;min-width:52
 /* ---------------- Buttons ---------------- */
 .btn{
   display:inline-flex;align-items:center;justify-content:center;gap:10px;
-  padding:16px 28px;font-size:11.5px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;
+  padding:16px 28px;font-size:11.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
   border:1px solid var(--ink);transition:background .3s,color .3s;
 }
 .btn-primary{background:var(--ink);color:var(--on-dark);}

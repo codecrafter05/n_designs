@@ -18,12 +18,12 @@
 .opt-block{margin-bottom:26px;}
 .opt-label{
   display:flex;justify-content:space-between;align-items:center;
-  font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-70);
+  font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-70);
   margin-bottom:12px;
 }
 .opt-label button{
   background:none;border:0;font:inherit;color:var(--ink);text-decoration:underline;text-underline-offset:3px;
-  font-size:11px;letter-spacing:.1em;text-transform:none;font-weight:500;
+  font-size:11px;letter-spacing:.1em;text-transform:none;font-weight:400;
 }
 .swatches{display:flex;gap:10px;}
 .swatch{
@@ -53,7 +53,7 @@
 .acc-item{border-bottom:1px solid var(--line);}
 .acc-trigger{
   width:100%;display:flex;justify-content:space-between;align-items:center;
-  background:none;border:0;padding:18px 2px;font-size:12.5px;font-weight:600;
+  background:none;border:0;padding:18px 2px;font-size:12.5px;font-weight:700;
   letter-spacing:.1em;text-transform:uppercase;color:var(--ink);
 }
 .acc-trigger .plus{position:relative;width:14px;height:14px;flex:none;}

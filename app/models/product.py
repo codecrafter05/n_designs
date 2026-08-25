@@ -46,6 +46,7 @@ class Product(Base):
     # Use ProductVariant.price / compare_at_price. May be dropped in a later
     # migration once nothing reads this column.
     base_price: Mapped[float] = mapped_column(Numeric(12, 3), nullable=False)
+    weight_kg: Mapped[float | None] = mapped_column(Numeric(10, 3), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     is_featured: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(

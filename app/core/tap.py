@@ -7,6 +7,7 @@ import urllib.request
 from decimal import Decimal
 
 from app.core.config import Settings
+from app.core.dial_codes import dial_prefixes
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +35,7 @@ def split_phone(raw: str) -> dict:
     text = (raw or "").strip().replace(" ", "").replace("-", "")
     if text.startswith("+"):
         text = text[1:]
-    for code in ("973", "966", "971", "965"):
+    for code in dial_prefixes():
         if text.startswith(code) and len(text) > len(code):
             return {"country_code": code, "number": text[len(code) :]}
     return {"country_code": "973", "number": text or "00000000"}

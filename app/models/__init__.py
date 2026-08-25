@@ -7,6 +7,7 @@ from app.models.order import Order, OrderItem
 from app.models.cart import Cart, CartItem
 from app.models.payment import PaymentSession
 from app.models.site import AboutStripImage, AboutValue, HeroSlide, LegalPage, SiteSettings
+from app.models.delivery import DeliveryGroup, DeliveryGroupCountry, DeliveryWeightTier
 
 __all__ = [
     "User",
@@ -28,4 +29,7 @@ __all__ = [
     "AboutValue",
     "AboutStripImage",
     "LegalPage",
+    "DeliveryGroup",
+    "DeliveryGroupCountry",
+    "DeliveryWeightTier",
 ]
