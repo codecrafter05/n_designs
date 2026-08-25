@@ -40,13 +40,19 @@
               <th scope="col">Countries</th>
               <th scope="col">Handling fee</th>
               <th scope="col">Tiers</th>
+              <th scope="col">Status</th>
               <th scope="col"></th>
             </tr>
           </thead>
           <tbody>
             {% for row in rows %}
-            <tr>
-              <td class="fw-semibold">{{ row.name }}</td>
+            <tr{% if not row.is_active %} class="text-secondary"{% endif %}>
+              <td class="fw-semibold">
+                {{ row.name }}
+                {% if not row.is_active %}
+                <span class="alert-admin-neutral d-inline-block px-2 py-1 mb-0 ms-2">Inactive</span>
+                {% endif %}
+              </td>
               <td>{{ row.countries_label }}</td>
               <td>BHD {{ row.handling_label }}</td>
               <td>
@@ -55,6 +61,16 @@
                 {% else %}
                 <span class="alert-admin-neutral d-inline-block px-2 py-1 mb-0">None yet</span>
                 {% endif %}
+              </td>
+              <td>
+                <form method="post" action="/admin/delivery-prices/{{ row.id }}/toggle" class="mb-0">
+                  <div class="form-check form-switch mb-0">
+                    <input class="form-check-input" type="checkbox" role="switch"
+                           {% if row.is_active %}checked{% endif %}
+                           onchange="this.form.submit()">
+                    <label class="form-check-label">{{ 'Active' if row.is_active else 'Inactive' }}</label>
+                  </div>
+                </form>
               </td>
               <td class="text-end">
                 <a href="/admin/delivery-prices/{{ row.id }}/edit" class="btn btn-sm btn-admin-secondary">Edit</a>

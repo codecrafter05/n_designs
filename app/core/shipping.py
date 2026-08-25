@@ -34,6 +34,7 @@ def load_country_groups(db: Session) -> list[dict]:
     groups = (
         db.query(DeliveryGroup)
         .options(selectinload(DeliveryGroup.countries))
+        .filter(DeliveryGroup.is_active.is_(True))
         .order_by(DeliveryGroup.display_order, DeliveryGroup.id)
         .all()
     )
@@ -151,6 +152,8 @@ def calculate_shipping(db: Session, country: str, cart_weight_kg: Decimal) -> De
     group = find_delivery_group(db, country)
     if group is None:
         raise ShippingUnavailable(UNKNOWN_DESTINATION)
+    if not group.is_active:
+        raise ShippingUnavailable(UNAVAILABLE_YET)
 
     weight = as_weight(cart_weight_kg)
     if weight < 0:

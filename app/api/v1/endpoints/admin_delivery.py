@@ -54,6 +54,7 @@ def _list_row(row: DeliveryGroup) -> dict:
         "countries_label": ", ".join(countries) if countries else "—",
         "handling_label": _money_label(row.handling_fee),
         "tier_count": len(row.tiers),
+        "is_active": row.is_active,
     }
 
 
@@ -364,3 +365,13 @@ def delivery_update(
             form=form,
         )
     return _redirect("/admin/delivery-prices", notice="Delivery prices updated.")
+
+
+@router.post("/admin/delivery-prices/{group_id}/toggle", include_in_schema=False)
+def delivery_toggle(group_id: int, db: Session = Depends(get_db)):
+    row = db.query(DeliveryGroup).filter(DeliveryGroup.id == group_id).first()
+    if row is None:
+        return _redirect("/admin/delivery-prices", error="Delivery group not found.")
+    row.is_active = not row.is_active
+    db.commit()
+    return _redirect("/admin/delivery-prices", notice="Destination updated")

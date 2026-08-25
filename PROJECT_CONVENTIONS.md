@@ -28,6 +28,8 @@ Storefront Country `<select>`s are a flat A–Z list of `DeliveryGroupCountry` n
 
 Guest checkout drafts contact/shipping fields to `localStorage` key `nd_checkout_draft` (debounced 500ms): email, first name, last name, address, city, country, composed phone. Password and payment method are never stored. The draft is cleared on the order-confirmation page after a successful order (COD or Tap). Logged-in checkout always uses the account profile from the server and does not restore a leftover draft.
 
+A Delivery Prices group can be turned **Inactive** from the admin list (same switch + POST toggle as Products). Inactive groups stay in the admin with their countries, tiers, and handling fee untouched. Checkout’s country list and `calculate_shipping()` ignore them until reactivated (inactive destinations use the same “contact us on WhatsApp” block as a group with no tiers).
+
 **Cash on Delivery** still finalizes immediately on submit. **Pay Online** creates a `PaymentSession` snapshot (cart lines, totals, customer, discount) and redirects to Tap’s hosted page (`source: src_all`). Stock, cart, and discount usage are not touched until Tap’s charge is `CAPTURED` and verified server-to-server on `GET /payment/callback/{token}`. Failed/abandoned payments leave the cart intact. The displayed payment method on those orders is `Card (Tap)`; `Order.tap_charge_id` is stored for admin/refund lookup. `TAP_SECRET_KEY` lives in `.env` and is never logged. `GET /order-confirmation/{order_id}` requires the owning customer to be logged in when `customer_id` is set; true guest orders (`customer_id` NULL) remain reachable by URL.
 
 ## Transactional email
