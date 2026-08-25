@@ -64,6 +64,10 @@ A code applied on the cart is stored as `Cart.discount_code_id` and carries into
 
 When `applies_to_sale_items` is off, the percentage applies only to line items that are not on sale (`compare_at_price` is missing or not lower than `price`). Sale-line payables stay at the sale price. Shipping is added after the discount.
 
+## Uploaded images
+
+Admin uploads (products, categories, hero slides, about intro, about strip) all go through `save_image()` in `app/core/uploads.py`. JPG/PNG are re-encoded to WebP at quality 82 with alpha preserved (RGBA). Files that are already WebP are stored as-is. Max size (5MB) is checked on the original bytes before conversion. Existing files on disk are never rewritten. Templates always use the stored `image_url`; do not hardcode an extension.
+
 ## Site settings (homepage hero + About intro)
 
 `SiteSettings` is a singleton (`id = 1`, MySQL CHECK `id = 1`). Never insert another row — `get_or_create_site_settings()` locks and creates `id=1` on first save. `HeroSlide` rows are ordered by `sort_order`; zero slides keep the CSS fallback photo on `.hero-image`, one slide is static, two or more crossfade every 6s. Hero heading is plain admin text (no automatic italic on a word). Empty heading/body fields omit the tags rather than rendering blanks.
