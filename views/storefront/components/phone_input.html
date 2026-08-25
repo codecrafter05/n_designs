@@ -4,11 +4,11 @@
   </label>
   <div class="phone-join">
     <select class="phone-dial" data-phone-dial aria-label="Dial code">
-      <option value="+973" data-country="Bahrain">🇧🇭 +973</option>
-      <option value="+966" data-country="Saudi Arabia">🇸🇦 +966</option>
-      <option value="+971" data-country="United Arab Emirates">🇦🇪 +971</option>
-      <option value="+965" data-country="Kuwait">🇰🇼 +965</option>
-      <option value="" data-country="Other">Other</option>
+      {% for row in shipping_dial_options %}
+      <option value="{{ row.dial_code }}" data-country="{{ row.name }}">{{ row.flag }} {{ row.dial_code }}</option>
+      {% else %}
+      <option value="+973">🇧🇭 +973</option>
+      {% endfor %}
     </select>
     <input id="{{ phone_local_id|default('phone_local') }}" class="phone-local" type="tel"
            data-phone-local autocomplete="tel-national"

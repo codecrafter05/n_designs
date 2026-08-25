@@ -16,6 +16,12 @@ from app.core.discounts import discount_amount, is_usable
 from app.core.email import send_order_emails
 from app.core.pricing import payable as _payable
 from app.core.security import hash_password
+from app.core.shipping import (
+    ShippingUnavailable,
+    calculate_shipping,
+    cart_weight_kg,
+    lines_weight_kg,
+)
 from app.models.cart import Cart
 from app.models.customer import Customer
 from app.models.discount import DiscountCode
@@ -248,7 +254,7 @@ def order_email_payload(
     }
 
 
-def prepare_checkout(db: Session, cart: Cart) -> PreparedCheckout:
+def prepare_checkout(db: Session, cart: Cart, country: str) -> PreparedCheckout:
     locked = (
         db.query(Cart).filter(Cart.id == cart.id).with_for_update().first()
     )
@@ -276,7 +282,10 @@ def prepare_checkout(db: Session, cart: Cart) -> PreparedCheckout:
         )
 
     lines, subtotal = snapshot_cart_lines(cart)
-    shipping = SHIPPING_BHD
+    try:
+        shipping = calculate_shipping(db, country, cart_weight_kg(cart))
+    except ShippingUnavailable as exc:
+        raise CheckoutBlocked(exc.message) from exc
     discount_row = None
     applied_discount = Decimal("0")
     if cart.discount_code_id:
@@ -454,12 +463,23 @@ def finalize_order(
         for line in lines:
             row = (
                 db.query(ProductVariant)
+                .options(
+                    selectinload(ProductVariant.color).selectinload(ProductColor.product)
+                )
                 .filter(ProductVariant.id == line.product_variant_id)
                 .first()
             )
             if row is None:
                 raise CheckoutBlocked("An item in this order is no longer available.")
             variants[line.product_variant_id] = row
+
+    try:
+        shipping = calculate_shipping(
+            db, form["country"], lines_weight_kg(lines, variants)
+        )
+    except ShippingUnavailable as exc:
+        raise CheckoutBlocked(exc.message) from exc
+    total = (subtotal - applied_discount + shipping).quantize(Decimal("0.001"))
 
     discount_code_id = None
     discount_code_snapshot = None
@@ -505,6 +525,7 @@ def finalize_order(
         customer_id=customer.id if customer is not None else None,
         status="pending",
         total=total,
+        shipping_amount=shipping,
         shipping_address=shipping_address,
         payment_method=payment_method,
         discount_code_id=discount_code_id,

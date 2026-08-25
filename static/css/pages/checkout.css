@@ -91,6 +91,11 @@ legend{
   background:none;border:0;padding:0;margin-left:8px;font-size:11px;letter-spacing:.08em;
   text-transform:uppercase;color:var(--ink-45);text-decoration:underline;text-underline-offset:3px;
 }
+.shipping-note{
+  font-size:13px;color:var(--ink-70);line-height:1.6;margin:0 0 12px;
+}
+.shipping-note[hidden]{display:none;}
+#placeOrder:disabled{opacity:.45;cursor:not-allowed;}
 
 @media (max-width:900px){
   .co-layout{grid-template-columns:1fr;}

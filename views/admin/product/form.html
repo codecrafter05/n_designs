@@ -54,6 +54,13 @@
             </select>
             <div class="form-text">Products attach to a subcategory, never a top-level category.</div>
           </div>
+          <div class="col-md-6">
+            <label class="form-label" for="weight_kg">Weight (kg)</label>
+            <input class="form-control" type="number" id="weight_kg" name="weight_kg"
+                   min="0" step="0.001"
+                   value="{{ product.weight_kg if product and product.weight_kg is not none else '' }}">
+            <div class="form-text">Used to calculate shipping. Leave blank only temporarily — orders may undercharge shipping for products without a weight set.</div>
+          </div>
           <div class="col-12">
             <label class="form-label" for="description">Description</label>
             <textarea class="form-control" id="description" name="description" rows="4">{{ product.description if product and product.description else '' }}</textarea>

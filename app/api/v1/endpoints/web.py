@@ -44,6 +44,17 @@ from app.core.site_content import (
     split_lines,
     split_paragraphs,
 )
+from app.core.shipping import (
+    ShippingUnavailable,
+    calculate_shipping,
+    canonical_country_name,
+    cart_weight_kg,
+    country_names,
+    dial_options,
+    flat_countries,
+    load_country_groups,
+    pick_country,
+)
 from app.core.tap import TAP_START_ERROR, TapError, create_charge, retrieve_charge, tap_configured
 from app.models.category import Category
 from app.models.customer import Customer
@@ -165,13 +176,6 @@ def collections_grouped(db: Session) -> list[tuple[Category, list[Category]]]:
 _TONES = ("a", "b", "c", "d")
 NEW_ARRIVALS_LIMIT = 8
 HOMEPAGE_SALE_LIMIT = 4
-COUNTRIES = (
-    "Bahrain",
-    "Saudi Arabia",
-    "United Arab Emirates",
-    "Kuwait",
-    "Other",
-)
 
 
 def _fmt_bhd(amount) -> str:
@@ -298,6 +302,9 @@ def storefront_context(request: Request, *, nav_variant: str = "solid", **extra)
     extra.setdefault("top_categories", [])
     extra.setdefault("cart_count", 0)
     extra.setdefault("current_customer", None)
+    extra.setdefault("country_groups", [])
+    extra.setdefault("shipping_countries", [])
+    extra.setdefault("shipping_dial_options", [])
     return {
         "request": request,
         "nav_variant": nav_variant,
@@ -376,6 +383,10 @@ def _storefront_page(
         cart, token, needs_cookie = get_or_create_cart(db, request)
         extra.setdefault("cart_count", _cart_count(cart))
         extra.setdefault("current_customer", get_current_customer(request, db))
+        if "country_groups" not in extra:
+            extra["country_groups"] = load_country_groups(db)
+        extra.setdefault("shipping_countries", flat_countries(extra["country_groups"]))
+        extra.setdefault("shipping_dial_options", dial_options(extra["country_groups"]))
     response = templates.TemplateResponse(
         template,
         storefront_context(request, nav_variant=nav_variant, **extra),
@@ -594,20 +605,21 @@ def _split_name(full: str) -> tuple[str, str]:
     return parts[0], parts[1]
 
 
-def _checkout_form(data: dict | None = None) -> dict:
+def _checkout_form(data: dict | None = None, *, country_names: list[str] | None = None) -> dict:
     data = data or {}
+    country = pick_country(data.get("country") or "", country_names or [])
     return {
         "email": (data.get("email") or "").strip(),
         "first_name": (data.get("first_name") or "").strip(),
         "last_name": (data.get("last_name") or "").strip(),
         "address": (data.get("address") or "").strip(),
         "city": (data.get("city") or "").strip(),
-        "country": (data.get("country") or "Bahrain").strip(),
+        "country": country,
         "phone": (data.get("phone") or "").strip(),
     }
 
 
-def _form_from_customer(customer: Customer) -> dict:
+def _form_from_customer(customer: Customer, country_names: list[str]) -> dict:
     first, last = _split_name(customer.name)
     return _checkout_form(
         {
@@ -616,9 +628,10 @@ def _form_from_customer(customer: Customer) -> dict:
             "last_name": last,
             "address": customer.address or "",
             "city": customer.city or "",
-            "country": customer.country or "Bahrain",
+            "country": customer.country or "",
             "phone": customer.phone or "",
-        }
+        },
+        country_names=country_names,
     )
 
 
@@ -635,20 +648,32 @@ def _checkout_page(
     if not lines:
         return RedirectResponse(url="/cart", status_code=303)
     customer = get_current_customer(request, db)
+    groups = load_country_groups(db)
+    names = country_names(groups)
     if form is None and customer is not None:
-        form = _form_from_customer(customer)
-    shipping = SHIPPING_BHD
+        form = _form_from_customer(customer, names)
+    form = _checkout_form(form, country_names=names)
+    shipping = None
+    shipping_available = True
+    shipping_message = None
+    try:
+        shipping = calculate_shipping(db, form["country"], cart_weight_kg(cart))
+    except ShippingUnavailable as exc:
+        shipping_available = False
+        shipping_message = exc.message
     promo = _promo_vars(cart)
-    total = promo["cart_payable_total"] + shipping
+    total_label = _fmt_bhd(promo["cart_payable_total"] + shipping) if shipping is not None else "—"
     return _storefront_page(
         request,
         "storefront/checkout.html",
         db=db,
         cart_lines=lines,
-        shipping_label=_fmt_bhd(shipping),
-        checkout_total_label=_fmt_bhd(total),
-        countries=COUNTRIES,
-        form=_checkout_form(form),
+        shipping_label=_fmt_bhd(shipping) if shipping is not None else "—",
+        shipping_available=shipping_available,
+        shipping_message=shipping_message,
+        checkout_total_label=total_label,
+        form=form,
+        country_groups=groups,
         checkout_error=error,
         logged_in=customer is not None,
         create_account=create_account,
@@ -749,6 +774,46 @@ def _start_tap_checkout(
     return pay_url
 
 
+@router.get("/checkout/shipping", include_in_schema=False)
+def checkout_shipping(request: Request, country: str = "", db: Session = Depends(get_db)):
+    cart, _, _ = get_or_create_cart(db, request)
+    if not cart.items:
+        return JSONResponse({"ok": False, "available": False, "error": "Your bag is empty."})
+    dest = canonical_country_name(db, country)
+    if dest is None:
+        return JSONResponse(
+            {
+                "ok": True,
+                "available": False,
+                "message": "We don't ship to this destination.",
+                "shipping_label": "—",
+                "total_label": "—",
+            }
+        )
+    promo = cart_pricing(cart)
+    try:
+        shipping = calculate_shipping(db, dest, cart_weight_kg(cart))
+    except ShippingUnavailable as exc:
+        return JSONResponse(
+            {
+                "ok": True,
+                "available": False,
+                "message": exc.message,
+                "shipping_label": "—",
+                "total_label": "—",
+            }
+        )
+    total = promo.payable_total + shipping
+    return JSONResponse(
+        {
+            "ok": True,
+            "available": True,
+            "shipping_label": _fmt_bhd(shipping),
+            "total_label": _fmt_bhd(total),
+        }
+    )
+
+
 @router.get("/checkout/check-email", include_in_schema=False)
 def checkout_check_email(email: str = "", db: Session = Depends(get_db)):
     email_key = email.strip().lower()
@@ -788,6 +853,7 @@ def storefront_checkout_submit(
     create_account: str = Form(""),
     account_password: str = Form(""),
 ):
+    names = country_names(load_country_groups(db))
     form = _checkout_form(
         {
             "email": email,
@@ -797,7 +863,8 @@ def storefront_checkout_submit(
             "city": city,
             "country": country,
             "phone": phone,
-        }
+        },
+        country_names=names,
     )
     logged_in = get_current_customer(request, db)
     want_account = create_account == "1" and logged_in is None
@@ -832,6 +899,10 @@ def storefront_checkout_submit(
         return fail("Please choose a payment method.")
     if want_account and len(account_password) < 8:
         return fail("Password must be at least 8 characters.")
+    chosen = canonical_country_name(db, country)
+    if chosen is None:
+        return fail("Please select a country we ship to.")
+    form["country"] = chosen
 
     cart, _, _ = get_or_create_cart(db, request)
     lines, _subtotal = _cart_lines(cart)
@@ -839,7 +910,7 @@ def storefront_checkout_submit(
         return RedirectResponse(url="/cart", status_code=303)
 
     try:
-        prepared = prepare_checkout(db, cart)
+        prepared = prepare_checkout(db, cart, form["country"])
     except CheckoutGone:
         db.rollback()
         return RedirectResponse(url="/cart", status_code=303)
@@ -1120,7 +1191,11 @@ def storefront_order_confirmation(
             if order.discount_code_snapshot
             else None
         ),
-        order_shipping_label=_fmt_bhd(SHIPPING_BHD),
+        order_shipping_label=_fmt_bhd(
+            order.shipping_amount
+            if order.shipping_amount is not None
+            else SHIPPING_BHD
+        ),
     )
 
 

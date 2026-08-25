@@ -189,7 +189,11 @@ def orders_detail(order_id: int, request: Request, db: Session = Depends(get_db)
             }
         )
 
-    shipping = SHIPPING_BHD
+    shipping = (
+        order.shipping_amount
+        if order.shipping_amount is not None
+        else SHIPPING_BHD
+    )
     discount_amount = Decimal(str(order.discount_amount or 0))
     computed_total = items_subtotal - discount_amount + shipping
     stored_total = Decimal(str(order.total)).quantize(Decimal("0.001"))

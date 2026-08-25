@@ -147,18 +147,17 @@
     setTimeout(function(){ if(clone.parentNode) clone.remove(); }, 900);
   };
 
-  var DIAL_CODES = [
-    { code: '+973', country: 'Bahrain' },
-    { code: '+966', country: 'Saudi Arabia' },
-    { code: '+971', country: 'United Arab Emirates' },
-    { code: '+965', country: 'Kuwait' }
-  ];
+  function codesFromDial(dial) {
+    return Array.from(dial.options).filter(function (opt) { return opt.value; }).map(function (opt) {
+      return { code: opt.value, country: opt.getAttribute('data-country') || '' };
+    });
+  }
 
-  function parseDialPhone(raw) {
+  function parseDialPhone(raw, dialCodes) {
     var original = (raw || '').trim();
     var compact = original.replace(/[\s\-()]/g, '');
     if (!compact) return { code: null, local: '' };
-    var ranked = DIAL_CODES.slice().sort(function (a, b) { return b.code.length - a.code.length; });
+    var ranked = (dialCodes || []).slice().sort(function (a, b) { return b.code.length - a.code.length; });
     for (var i = 0; i < ranked.length; i++) {
       var code = ranked[i].code;
       if (compact.indexOf(code) === 0) {
@@ -188,6 +187,8 @@
     if (!dial || !local || !hidden) return;
     var form = group.closest('form');
     var country = form ? form.querySelector('#country, select[name="country"]') : null;
+    var dialCodes = codesFromDial(dial);
+    var fallback = (dial.options[0] && dial.options[0].value) || '+973';
 
     function syncHidden() {
       hidden.value = composeDialPhone(dial.value, local.value);
@@ -195,18 +196,19 @@
 
     function applyCountry() {
       if (!country) return;
-      var match = DIAL_CODES.find(function (row) { return row.country === country.value; });
-      dial.value = match ? match.code : '';
+      var match = dialCodes.find(function (row) { return row.country === country.value; });
+      if (match) dial.value = match.code;
       syncHidden();
     }
 
-    var parsed = parseDialPhone(hidden.value);
+    var parsed = parseDialPhone(hidden.value, dialCodes);
     if (parsed.code === null) {
       if (country) applyCountry();
-      else dial.value = '+973';
+      else dial.value = fallback;
       local.value = '';
     } else {
       dial.value = parsed.code;
+      if (!dial.value) dial.value = fallback;
       local.value = parsed.local;
     }
     syncHidden();

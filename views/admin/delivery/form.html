@@ -1,0 +1,218 @@
+{% extends "admin/base.html" %}
+
+{% block title %}N Designs — {{ 'Edit Delivery Prices' if row else 'Add Delivery Prices' }}{% endblock %}
+
+{% block content %}
+  <div class="page-breadcrumb d-none d-sm-flex align-items-center mb-3">
+    <div class="breadcrumb-title pe-3">N Designs</div>
+    <div class="ps-3">
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-0 p-0">
+          <li class="breadcrumb-item"><a href="/admin/dashboard"><i class="material-icons-outlined">home</i></a></li>
+          <li class="breadcrumb-item"><a href="/admin/delivery-prices">Delivery Prices</a></li>
+          <li class="breadcrumb-item active" aria-current="page">{{ 'Edit' if row else 'Add' }}</li>
+        </ol>
+      </nav>
+    </div>
+  </div>
+
+  <form id="delivery-form" method="post"
+        action="{{ '/admin/delivery-prices/' ~ row.id ~ '/edit' if row else '/admin/delivery-prices/new' }}">
+    <input type="hidden" name="countries_json" id="countries_json">
+    <input type="hidden" name="tiers_json" id="tiers_json">
+
+    <div class="card rounded-4 mb-3">
+      <div class="card-body p-4">
+        <h4 class="fw-bold mb-4">{{ 'Edit destination' if row else 'Add destination' }}</h4>
+        <div class="mb-3">
+          <label class="form-label" for="name">Label</label>
+          <input class="form-control" type="text" id="name" name="name" required maxlength="100"
+                 value="{{ name }}" placeholder="Gulf">
+          <div class="form-text">Internal name for this list — e.g. Bahrain, Gulf, USA &amp; UK.</div>
+        </div>
+        <div class="mb-0">
+          <label class="form-label" for="handling_fee">Handling fee</label>
+          <input class="form-control" type="number" id="handling_fee" name="handling_fee"
+                 min="0" step="0.001" value="{{ handling_fee }}">
+          <div class="form-text">Added once per order for this destination, on top of the weight price.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card rounded-4 mb-3">
+      <div class="card-body p-4">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+          <h5 class="mb-0">Countries</h5>
+          <button type="button" class="btn btn-admin-primary" id="add-country">Add Country</button>
+        </div>
+        <p class="form-text mt-0 mb-3">Type the country name as it should appear at checkout. One country per row.</p>
+        <div id="countries" class="d-flex flex-column gap-3"></div>
+      </div>
+    </div>
+
+    <div class="card rounded-4 mb-3">
+      <div class="card-body p-4">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+          <h5 class="mb-0">Weight tiers</h5>
+          <button type="button" class="btn btn-admin-primary" id="add-tier">Add Tier</button>
+        </div>
+        <p class="form-text mt-0 mb-3">Up to X kg costs Y. Leave empty if rates are not ready yet — checkout will block this destination until a tier exists. One high max weight is a flat rate.</p>
+        <div id="tiers" class="d-flex flex-column gap-3"></div>
+      </div>
+    </div>
+
+    <div class="d-flex gap-2 mb-4">
+      <button type="submit" class="btn btn-admin-primary">{{ 'Save changes' if row else 'Create destination' }}</button>
+      <a href="/admin/delivery-prices" class="btn btn-admin-secondary">Cancel</a>
+    </div>
+  </form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  {% if error %}
+  if (window.showAdminToast) window.showAdminToast({{ error | tojson }}, false);
+  {% endif %}
+  var INITIAL_COUNTRIES = JSON.parse({{ countries_json | tojson }});
+  var INITIAL_TIERS = JSON.parse({{ tiers_json | tojson }});
+  var countriesEl = document.getElementById('countries');
+  var tiersEl = document.getElementById('tiers');
+
+  function el(html) {
+    var wrap = document.createElement('div');
+    wrap.innerHTML = html.trim();
+    return wrap.firstElementChild;
+  }
+
+  function escapeHtml(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function countryRow(name) {
+    var row = el(
+      '<div class="card rounded-4 shadow-none border delivery-country-row">' +
+        '<div class="card-body py-3">' +
+          '<div class="row g-3 align-items-end">' +
+            '<div class="col">' +
+              '<label class="form-label">Country name</label>' +
+              '<input class="form-control c-name" type="text" placeholder="Saudi Arabia" value="' + escapeHtml(name || '') + '">' +
+            '</div>' +
+            '<div class="col-auto">' +
+              '<button type="button" class="btn btn-sm btn-admin-danger c-remove">Remove</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>'
+    );
+    row.querySelector('.c-remove').addEventListener('click', function () { row.remove(); });
+    return row;
+  }
+
+  function tierRow(data) {
+    data = data || {};
+    var row = el(
+      '<div class="card rounded-4 shadow-none border delivery-tier-row">' +
+        '<div class="card-body py-3">' +
+          '<div class="row g-3 align-items-end">' +
+            '<div class="col-md-5">' +
+              '<label class="form-label">Up to (kg)</label>' +
+              '<input class="form-control t-weight" type="number" min="0.001" step="0.001" placeholder="0.5" value="' + escapeHtml(data.max_weight_kg || '') + '">' +
+            '</div>' +
+            '<div class="col-md-5">' +
+              '<label class="form-label">Price</label>' +
+              '<input class="form-control t-price" type="number" min="0" step="0.001" placeholder="3.500" value="' + escapeHtml(data.price || '') + '">' +
+            '</div>' +
+            '<div class="col-md-auto ms-md-auto">' +
+              '<button type="button" class="btn btn-sm btn-admin-danger t-remove">Remove</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>'
+    );
+    row.querySelector('.t-remove').addEventListener('click', function () { row.remove(); });
+    return row;
+  }
+
+  function addCountry(name) {
+    countriesEl.appendChild(countryRow(name));
+  }
+  function addTier(data) {
+    tiersEl.appendChild(tierRow(data));
+  }
+
+  document.getElementById('add-country').addEventListener('click', function () { addCountry(''); });
+  document.getElementById('add-tier').addEventListener('click', function () { addTier({}); });
+
+  if (INITIAL_COUNTRIES.length) {
+    INITIAL_COUNTRIES.forEach(addCountry);
+  } else {
+    addCountry('');
+  }
+  if (INITIAL_TIERS.length) {
+    INITIAL_TIERS.forEach(addTier);
+  }
+
+  function collectCountries() {
+    var names = [];
+    var seen = {};
+    var error = '';
+    countriesEl.querySelectorAll('.delivery-country-row').forEach(function (row) {
+      if (error) return;
+      var name = row.querySelector('.c-name').value.trim();
+      if (!name) return;
+      var key = name.toLowerCase();
+      if (seen[key]) { error = '“' + name + '” is listed more than once.'; return; }
+      seen[key] = true;
+      names.push(name);
+    });
+    if (!names.length && !error) error = 'Add at least one country.';
+    return { names: names, error: error };
+  }
+
+  function collectTiers() {
+    var tiers = [];
+    var seen = {};
+    var error = '';
+    tiersEl.querySelectorAll('.delivery-tier-row').forEach(function (row) {
+      if (error) return;
+      var weight = row.querySelector('.t-weight').value.trim();
+      var price = row.querySelector('.t-price').value.trim();
+      if (!weight && !price) return;
+      if (!weight || !price) { error = 'Every tier needs both a max weight and a price.'; return; }
+      var w = parseFloat(weight);
+      var p = parseFloat(price);
+      if (!(w > 0)) { error = 'Weight must be greater than zero.'; return; }
+      if (isNaN(p) || p < 0) { error = 'Price cannot be negative.'; return; }
+      if (seen[weight]) { error = 'Each tier needs a different max weight.'; return; }
+      seen[weight] = true;
+      tiers.push({ max_weight_kg: weight, price: price });
+    });
+    return { tiers: tiers, error: error };
+  }
+
+  document.getElementById('delivery-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (!document.getElementById('name').value.trim()) {
+      window.showAdminToast('Label is required.', false);
+      return;
+    }
+    var countries = collectCountries();
+    if (countries.error) {
+      window.showAdminToast(countries.error, false);
+      return;
+    }
+    var tiers = collectTiers();
+    if (tiers.error) {
+      window.showAdminToast(tiers.error, false);
+      return;
+    }
+    document.getElementById('countries_json').value = JSON.stringify(countries.names);
+    document.getElementById('tiers_json').value = JSON.stringify(tiers.tiers);
+    e.target.submit();
+  });
+})();
+</script>
+{% endblock %}

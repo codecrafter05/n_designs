@@ -51,8 +51,8 @@
         <div class="field">
           <label for="country">Country</label>
           <select id="country" name="country" required>
-            {% for country in countries %}
-            <option value="{{ country }}" {% if form.country == country %}selected{% endif %}>{{ country }}</option>
+            {% for country in shipping_countries %}
+            <option value="{{ country.name }}" {% if form.country == country.name %}selected{% endif %}>{{ country.name }}</option>
             {% endfor %}
           </select>
         </div>

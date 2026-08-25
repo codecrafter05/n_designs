@@ -5,7 +5,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.api.v1.endpoints.web import COUNTRIES, _fmt_bhd, _storefront_page
+from app.api.v1.endpoints.web import _fmt_bhd, _storefront_page
 from app.core.customer_auth import (
     create_customer_session,
     destroy_customer_session,
@@ -13,6 +13,7 @@ from app.core.customer_auth import (
 )
 from app.core.database import get_db
 from app.core.orders import order_number
+from app.core.shipping import canonical_country_name, country_names, load_country_groups, pick_country
 from app.core.security import hash_password, verify_password
 from app.models.customer import Customer
 from app.models.order import Order
@@ -184,9 +185,19 @@ def _split_name(full: str) -> tuple[str, str]:
     return parts[0], parts[1]
 
 
-def _profile_form(customer: Customer, data: dict | None = None) -> dict:
+def _profile_form(
+    customer: Customer,
+    data: dict | None = None,
+    *,
+    country_names: list[str],
+) -> dict:
     first, last = _split_name(customer.name)
     data = data or {}
+    country = (
+        data.get("country")
+        if data.get("country") is not None
+        else (customer.country or "")
+    )
     return {
         "first_name": (data.get("first_name") if data.get("first_name") is not None else first).strip(),
         "last_name": (data.get("last_name") if data.get("last_name") is not None else last).strip(),
@@ -194,7 +205,7 @@ def _profile_form(customer: Customer, data: dict | None = None) -> dict:
         "phone": (data.get("phone") if data.get("phone") is not None else (customer.phone or "")).strip(),
         "address": (data.get("address") if data.get("address") is not None else (customer.address or "")).strip(),
         "city": (data.get("city") if data.get("city") is not None else (customer.city or "")).strip(),
-        "country": (data.get("country") if data.get("country") is not None else (customer.country or "Bahrain")).strip(),
+        "country": pick_country(country, country_names),
     }
 
 
@@ -258,12 +269,12 @@ def account_edit_get(request: Request, db: Session = Depends(get_db)):
     customer, denied = _require_customer(request, db, "/account/edit")
     if denied:
         return denied
+    names = country_names(load_country_groups(db))
     return _storefront_page(
         request,
         "storefront/account-edit.html",
         db=db,
-        form=_profile_form(customer),
-        countries=COUNTRIES,
+        form=_profile_form(customer, country_names=names),
         auth_error=None,
     )
 
@@ -284,6 +295,7 @@ def account_edit_post(
     if denied:
         return denied
 
+    names = country_names(load_country_groups(db))
     form = _profile_form(
         customer,
         {
@@ -295,6 +307,7 @@ def account_edit_post(
             "city": city,
             "country": country,
         },
+        country_names=names,
     )
 
     def fail(message: str):
@@ -303,7 +316,6 @@ def account_edit_post(
             "storefront/account-edit.html",
             db=db,
             form=form,
-            countries=COUNTRIES,
             auth_error=message,
         )
 
@@ -324,6 +336,10 @@ def account_edit_post(
         return fail("Please fill in: " + ", ".join(missing) + ".")
     if "@" not in form["email"]:
         return fail("Please enter a valid email.")
+    chosen = canonical_country_name(db, country)
+    if chosen is None:
+        return fail("Please select a country we ship to.")
+    form["country"] = chosen
 
     email_key = form["email"].lower()
     other = _find_by_email(db, email_key)
