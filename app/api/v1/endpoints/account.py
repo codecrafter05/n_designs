@@ -12,6 +12,13 @@ from app.core.customer_auth import (
     get_current_customer,
 )
 from app.core.database import get_db
+from app.core.form_protection import (
+    RATE_LIMIT_MESSAGE,
+    honeypot_filled,
+    is_rate_limited,
+    silent_reject,
+)
+from app.core.math_captcha import CAPTCHA_WRONG, answer_is_correct, new_challenge
 from app.core.orders import order_number
 from app.core.shipping import canonical_country_name, country_names, load_country_groups, pick_country
 from app.core.security import hash_password, verify_password
@@ -53,6 +60,7 @@ def register_get(request: Request, db: Session = Depends(get_db), next: str | No
         form={"name": "", "email": "", "phone": ""},
         next_path=_safe_next(next) if next else "",
         auth_error=None,
+        captcha=new_challenge(),
     )
 
 
@@ -66,6 +74,9 @@ def register_post(
     password: str = Form(""),
     confirm_password: str = Form(""),
     next: str = Form(""),
+    website_url: str = Form(""),
+    captcha_token: str = Form(""),
+    captcha_answer: str = Form(""),
 ):
     form = {"name": name.strip(), "email": email.strip(), "phone": phone.strip()}
     next_path = _safe_next(next) if next else "/account"
@@ -80,7 +91,13 @@ def register_post(
             form=form,
             next_path=next if next else "",
             auth_error=message,
+            captcha=new_challenge(),
         )
+
+    if honeypot_filled(website_url):
+        return silent_reject(request)
+    if is_rate_limited(request, "/register"):
+        return fail(RATE_LIMIT_MESSAGE)
 
     if not form["name"]:
         return fail("Please enter your name.")
@@ -90,6 +107,8 @@ def register_post(
         return fail(f"Password must be at least {MIN_PASSWORD_LEN} characters.")
     if password != confirm_password:
         return fail("Passwords do not match.")
+    if not answer_is_correct(captcha_token, captcha_answer):
+        return fail(CAPTCHA_WRONG)
 
     email_key = form["email"].lower()
     existing = _find_by_email(db, email_key)

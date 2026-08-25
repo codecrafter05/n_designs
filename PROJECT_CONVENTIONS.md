@@ -46,6 +46,12 @@ Admin section pages live directly under `/admin/{section}`, not `/admin/dashboar
 
 Examples: `/admin/categories`, `/admin/categories/new`, `/admin/products`, `/admin/orders`, `/admin/discount-codes`, `/admin/delivery-prices`, `/admin/customers`, `/admin/settings`, `/admin/Terms`. Login stays `/admin/login`.
 
+## Public form bot protection
+
+`/register` and `POST /checkout` share `app/core/form_protection.py`. A CSS-hidden text input named `website_url` (not `type="hidden"`) is included from `views/storefront/components/honeypot.html`. If it arrives non-empty, the handler 303s to `/` with no account or order created — do not show an error. Per-IP sliding-window limits (file-backed, shared across uvicorn workers) then cap register at 5 / 15 min and checkout at 8 / 10 min; over-limit humans see “Please try again later.” Login, account-edit, and cart posts are not covered.
+
+`/register` also has a server-generated add/subtract CAPTCHA (`app/core/math_captcha.py`). Two integers 1–10, subtraction always non-negative. The expected answer is HMAC-SHA256 signed with `SECRET_KEY` into hidden `captcha_token` (purpose prefix, expiry, nonce) — never the plaintext answer. Wrong, empty, expired, or tampered tokens re-render with toast “That answer wasn't quite right — try again”, a new question, and Name/Email/Phone intact. No CAPTCHA vendor or extra table. Do not add a third-party CAPTCHA unless this plus the honeypot is clearly not enough.
+
 ## Customers admin
 
 The customers screen is **read-only**. There is no create, edit, or delete — rows come from storefront registration or checkout. Guest vs Registered is whether `hashed_password` is set. Order counts are a single aggregated query; the count links to `/admin/orders?customer_id={id}`.
