@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 from datetime import datetime, timezone
 from urllib.parse import urlencode
@@ -20,6 +21,7 @@ from app.core.uploads import delete_image, save_image
 from app.models.site import AboutStripImage, AboutValue, HeroSlide
 
 router = APIRouter(tags=["admin-settings"])
+logger = logging.getLogger(__name__)
 
 _PROJECT_ROOT = os.path.normpath(
     os.path.join(os.path.dirname(__file__), "..", "..", "..", "..")
@@ -275,6 +277,7 @@ async def settings_save(
             delete_image(url)
         return _redirect("/admin/settings", error=str(exc))
     except Exception:
+        logger.exception("Could not save settings")
         db.rollback()
         for url in saved_urls + ([about_saved] if about_saved else []):
             delete_image(url)

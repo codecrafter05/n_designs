@@ -55,7 +55,13 @@ def save_image(upload: UploadFile, kind: str = "categories") -> str:
     _, public_prefix = _paths(kind)
     filename = f"{uuid.uuid4().hex}{ext}"
     dest = upload_dir / filename
-    dest.write_bytes(data)
+    try:
+        dest.write_bytes(data)
+    except OSError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not save the image file.",
+        ) from exc
     return f"{public_prefix}/{filename}"
 
 
