@@ -52,6 +52,10 @@ When `applies_to_sale_items` is off, the percentage applies only to line items t
 
 About page remainder (value cards, quote, image strip) is also edited under **About Page** in `/admin/settings`. `AboutValue` numbers are derived from order (`01`, `02`, …), not stored. Zero value cards or an empty quote omit those sections. Zero strip images keep the four placeholder tones.
 
+## Size Guide
+
+The Size Guide modal is a shared storefront component (`views/storefront/components/size_guide_modal.html`), included from `base.html` and opened from any `[data-open-size-guide]` trigger (PDP buttons and the footer Help link). Markup and JS live once — `static/js/script.js` exposes `openSizeGuideModal()` / `closeSizeGuideModal()`. The two charts (Dresses & Jalabiyas, Abayas) are hardcoded for every page. No admin screen and no database. Dress chest/waist/hips are stored in centimetres; INCH is `cm / 2.54` rounded to one decimal in JS at render time.
+
 ## Legal pages (Terms)
 
 Terms copy lives in `legal_pages` (`slug = terms`): title + HTML body. Admin is `/admin/Terms` (`/admin/terms` is the same screen). Body is edited with Quill 1.3.7 (CDN; the Maxton kit has no rich-text plugin). Allowed tags after sanitize: `p h2 h3 ul ol li strong em b i u br a[href]`. Storefront `/terms` renders that HTML in a centered, justified column (no sidebar TOC). A first paragraph starting with “Last updated” sits under the title. Legacy plain-text rows are converted on read until the next save. Empty fields omit the tags. Do not fold this into `/admin/settings`.

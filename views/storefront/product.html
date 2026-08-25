@@ -110,31 +110,6 @@
     </div>
   </div>
 </div>
-
-<div class="modal-overlay" id="sizeModal">
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="sizeModalTitle">
-    <div class="modal-head">
-      <div>
-        <h3 class="modal-title" id="sizeModalTitle">Size Guide</h3>
-        <div class="modal-sub">{{ product.name }} · Measurements in cm</div>
-      </div>
-      <button class="modal-close" id="sizeModalClose" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-    </div>
-    <table class="size-table">
-      <thead>
-        <tr><th>Size</th><th>Bust</th><th>Waist</th><th>Length</th></tr>
-      </thead>
-      <tbody>
-        <tr><td>XS</td><td>—</td><td>—</td><td>—</td></tr>
-        <tr><td>S</td><td>—</td><td>—</td><td>—</td></tr>
-        <tr><td>M</td><td>—</td><td>—</td><td>—</td></tr>
-        <tr><td>L</td><td>—</td><td>—</td><td>—</td></tr>
-        <tr><td>XL</td><td>—</td><td>—</td><td>—</td></tr>
-      </tbody>
-    </table>
-    <p class="modal-foot">Measurements are body measurements, not garment measurements. Still unsure? <a href="{{ whatsapp_url }}" style="text-decoration:underline;">Ask us on WhatsApp</a>.</p>
-  </div>
-</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -259,20 +234,6 @@
         panel.style.maxHeight = panel.scrollHeight + 'px';
       }
     });
-  });
-
-  var sizeModal = document.getElementById('sizeModal');
-  document.querySelectorAll('[data-open-size-guide]').forEach(function (btn) {
-    btn.addEventListener('click', function () { sizeModal.classList.add('is-open'); });
-  });
-  document.getElementById('sizeModalClose').addEventListener('click', function () {
-    sizeModal.classList.remove('is-open');
-  });
-  sizeModal.addEventListener('click', function (e) {
-    if (e.target === sizeModal) sizeModal.classList.remove('is-open');
-  });
-  document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape') sizeModal.classList.remove('is-open');
   });
 
   if (addBtn) {

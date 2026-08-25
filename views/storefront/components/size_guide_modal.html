@@ -1,0 +1,71 @@
+<div class="modal-overlay size-guide-overlay" id="sizeModal">
+  <div class="modal size-guide-dialog" role="dialog" aria-modal="true" aria-labelledby="sizeModalTitle">
+    <div class="modal-head">
+      <div>
+        <h3 class="modal-title" id="sizeModalTitle">Size Guide</h3>
+      </div>
+      <button class="modal-close" type="button" id="sizeModalClose" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+
+    <section class="size-guide-section">
+      <div class="size-guide-toolbar">
+        <h4 class="size-guide-heading">Dresses &amp; Jalabiyas</h4>
+        <div class="size-unit-toggle" role="group" aria-label="Measurement unit">
+          <button type="button" class="size-pill is-active" data-size-unit="cm">CM</button>
+          <button type="button" class="size-pill" data-size-unit="in">INCH</button>
+        </div>
+      </div>
+      <div class="size-table-wrap">
+        <table class="size-table">
+          <thead>
+            <tr>
+              <th>Size</th>
+              <th>UK</th>
+              <th>US</th>
+              <th>EU</th>
+              <th id="dressColChest">Chest (cm)</th>
+              <th id="dressColWaist">Waist (cm)</th>
+              <th id="dressColHips">Hips (cm)</th>
+            </tr>
+          </thead>
+          <tbody id="dressSizeBody"></tbody>
+        </table>
+      </div>
+      <p class="modal-foot">Measurements are body measurements, not garment measurements.</p>
+    </section>
+
+    <section class="size-guide-section">
+      <h4 class="size-guide-heading">Abayas</h4>
+      <div class="size-table-wrap">
+        <table class="size-table">
+          <thead>
+            <tr>
+              <th>Height (cm)</th>
+              <th>Height (feet)</th>
+              <th>Item Length</th>
+              <th>Sleeves</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>147</td><td>4.8</td><td>50"</td><td>26"</td></tr>
+            <tr><td>150</td><td>4.9</td><td>50"/52"</td><td>26"</td></tr>
+            <tr><td>153</td><td>5.0</td><td>52"</td><td>26.5"</td></tr>
+            <tr><td>156</td><td>5.1</td><td>52"/54"</td><td>26.5"</td></tr>
+            <tr><td>158</td><td>5.2</td><td>54"</td><td>27"</td></tr>
+            <tr><td>161</td><td>5.3</td><td>54"/56"</td><td>27"</td></tr>
+            <tr><td>164</td><td>5.4</td><td>56"</td><td>27.5"</td></tr>
+            <tr><td>167</td><td>5.5</td><td>56"/58"</td><td>27.5"</td></tr>
+            <tr><td>170</td><td>5.6</td><td>58"</td><td>28"</td></tr>
+            <tr><td>173</td><td>5.7</td><td>58"/60"</td><td>28"</td></tr>
+            <tr><td>176</td><td>5.8</td><td>60"</td><td>28.5"</td></tr>
+            <tr><td>179</td><td>5.9</td><td>60"/62"</td><td>28.5"</td></tr>
+            <tr><td>182</td><td>6.0</td><td>62"</td><td>29"</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="modal-foot">Measurements are for the abaya itself, not body measurements. If you plan to wear the abaya with heels, we recommend adding one to two inches extra.</p>
+    </section>
+
+    <p class="modal-foot">Still unsure? <a href="{{ whatsapp_url }}" style="text-decoration:underline;">Ask us on WhatsApp</a>.</p>
+  </div>
+</div>
