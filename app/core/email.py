@@ -57,7 +57,7 @@ def send_email(to_address: str, subject: str, html_body: str) -> bool:
         logger.warning("Skipping email; MAIL_HOST or MAIL_FROM_ADDRESS is not set")
         return False
 
-    from_name = (cfg.MAIL_FROM_NAME or "N Designs").strip()
+    from_name = (cfg.MAIL_FROM_NAME or "By N Designs").strip()
     username = (cfg.MAIL_USERNAME or from_address).strip()
     port = int(cfg.MAIL_PORT or 465)
 
@@ -104,7 +104,7 @@ def send_order_emails(payload: dict[str, Any]) -> None:
     customer_html = render_email("emails/order_confirmation.html", context)
     send_email(
         customer_to,
-        f"Order {number} confirmed — N Designs",
+        f"Order {number} confirmed — By N Designs",
         customer_html,
     )
 
