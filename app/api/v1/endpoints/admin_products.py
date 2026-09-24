@@ -20,6 +20,7 @@ from app.models.product import Product, ProductColor, ProductImage, ProductVaria
 router = APIRouter(tags=["admin-products"])
 
 FEATURED_LIMIT = 3
+PAGE_SIZE = 10
 FEATURED_LIMIT_MSG = (
     "You already have 3 featured products. Turn one off before featuring another."
 )
@@ -41,6 +42,31 @@ def _redirect(path: str, **params: str) -> RedirectResponse:
     qs = urlencode({k: v for k, v in params.items() if v})
     url = f"{path}?{qs}" if qs else path
     return RedirectResponse(url=url, status_code=303)
+
+
+def _parse_page(raw: str | int | None) -> int:
+    try:
+        return max(1, int(raw)) if raw else 1
+    except (TypeError, ValueError):
+        return 1
+
+
+def _total_pages(total: int) -> int:
+    if total <= 0:
+        return 1
+    return (total + PAGE_SIZE - 1) // PAGE_SIZE
+
+
+def _clamp_page(db: Session, raw: str | int | None) -> int:
+    total = db.query(func.count(Product.id)).scalar() or 0
+    return min(_parse_page(raw), _total_pages(total))
+
+
+def _list_redirect(page: str | int | None = None, **params: str) -> RedirectResponse:
+    n = _parse_page(page)
+    if n > 1:
+        params["page"] = str(n)
+    return _redirect("/admin/products", **params)
 
 
 def _subcategory_groups(db: Session) -> list[tuple[Category, list[Category]]]:
@@ -346,7 +372,10 @@ def _summarize(product: Product) -> dict:
 
 
 @router.get("/admin/products", response_class=HTMLResponse, include_in_schema=False)
-def products_list(request: Request, db: Session = Depends(get_db)):
+def products_list(request: Request, db: Session = Depends(get_db), page: int = 1):
+    total = db.query(func.count(Product.id)).scalar() or 0
+    total_pages = _total_pages(total)
+    page = min(_parse_page(page), total_pages)
     products = (
         db.query(Product)
         .options(
@@ -355,8 +384,12 @@ def products_list(request: Request, db: Session = Depends(get_db)):
             selectinload(Product.category).selectinload(Category.parent),
         )
         .order_by(Product.created_at.desc(), Product.id.desc())
+        .offset((page - 1) * PAGE_SIZE)
+        .limit(PAGE_SIZE)
         .all()
     )
+    range_start = 0 if total == 0 else (page - 1) * PAGE_SIZE + 1
+    range_end = min(page * PAGE_SIZE, total)
     return templates.TemplateResponse(
         "admin/product/list.html",
         {
@@ -366,6 +399,12 @@ def products_list(request: Request, db: Session = Depends(get_db)):
             "error": request.query_params.get("error"),
             "featured_count": _featured_count(db),
             "featured_limit": FEATURED_LIMIT,
+            "page": page,
+            "total": total,
+            "total_pages": total_pages,
+            "range_start": range_start,
+            "range_end": range_end,
+            "page_numbers": list(range(1, total_pages + 1)),
         },
     )
 
@@ -456,50 +495,62 @@ async def products_update(
 
 
 @router.post("/admin/products/{product_id}/toggle", include_in_schema=False)
-def products_toggle(product_id: int, db: Session = Depends(get_db)):
+def products_toggle(
+    product_id: int,
+    db: Session = Depends(get_db),
+    page: str | None = Form(None),
+):
     product = db.query(Product).filter(Product.id == product_id).first()
     if product is None:
-        return _redirect("/admin/products", error="Product not found.")
+        return _list_redirect(page, error="Product not found.")
     product.is_active = not product.is_active
     db.commit()
     state = "active" if product.is_active else "hidden"
-    return _redirect("/admin/products", notice=f"Product marked {state}.")
+    return _list_redirect(page, notice=f"Product marked {state}.")
 
 
 @router.post("/admin/products/{product_id}/toggle-featured", include_in_schema=False)
-def products_toggle_featured(product_id: int, db: Session = Depends(get_db)):
+def products_toggle_featured(
+    product_id: int,
+    db: Session = Depends(get_db),
+    page: str | None = Form(None),
+):
     product = db.query(Product).filter(Product.id == product_id).first()
     if product is None:
-        return _redirect("/admin/products", error="Product not found.")
+        return _list_redirect(page, error="Product not found.")
     if product.is_featured:
         product.is_featured = False
         db.commit()
-        return _redirect("/admin/products", notice="Removed from featured.")
+        return _list_redirect(page, notice="Removed from featured.")
     if _featured_count(db) >= FEATURED_LIMIT:
-        return _redirect("/admin/products", error=FEATURED_LIMIT_MSG)
+        return _list_redirect(page, error=FEATURED_LIMIT_MSG)
     product.is_featured = True
     db.commit()
-    return _redirect("/admin/products", notice="Marked as featured.")
+    return _list_redirect(page, notice="Marked as featured.")
 
 
 @router.post("/admin/products/{product_id}/delete", include_in_schema=False)
-def products_delete(product_id: int, db: Session = Depends(get_db)):
+def products_delete(
+    product_id: int,
+    db: Session = Depends(get_db),
+    page: str | None = Form(None),
+):
     product = _load_product(db, product_id)
     if product is None:
-        return _redirect("/admin/products", error="Product not found.")
+        return _list_redirect(page, error="Product not found.")
     image_urls = [image.image_url for image in product.images]
     try:
         db.delete(product)
         db.commit()
     except IntegrityError:
         db.rollback()
-        return _redirect(
-            "/admin/products",
+        return _list_redirect(
+            page,
             error="Can't delete — this product is still referenced by an order.",
         )
     for url in image_urls:
         delete_image(url, "products")
-    return _redirect("/admin/products", notice="Product deleted.")
+    return _list_redirect(_clamp_page(db, page), notice="Product deleted.")
 
 
 def _load_product(db: Session, product_id: int) -> Product | None:

@@ -88,12 +88,29 @@ def _list_row(order: Order) -> dict:
     }
 
 
-def _orders_href(*, customer_id: int | None = None, status: str | None = None) -> str:
+PAGE_SIZE = 20
+
+
+def _parse_page(raw: str | int | None) -> int:
+    try:
+        return max(1, int(raw)) if raw else 1
+    except (TypeError, ValueError):
+        return 1
+
+
+def _orders_href(
+    *,
+    customer_id: int | None = None,
+    status: str | None = None,
+    page: int | None = None,
+) -> str:
     params: dict[str, str] = {}
     if customer_id is not None:
         params["customer_id"] = str(customer_id)
     if status:
         params["status"] = status
+    if page and page > 1:
+        params["page"] = str(page)
     qs = urlencode(params)
     return f"/admin/orders?{qs}" if qs else "/admin/orders"
 
@@ -104,6 +121,7 @@ def orders_list(
     db: Session = Depends(get_db),
     status: str | None = None,
     customer_id: int | None = None,
+    page: int = 1,
 ):
     status_filter = (status or "").strip().lower()
     if status_filter and status_filter not in STATUS_FILTERS:
@@ -129,7 +147,17 @@ def orders_list(
         query = query.filter(Order.customer_id == customer.id)
     if status_filter:
         query = query.filter(Order.status == status_filter)
-    orders = query.order_by(Order.created_at.desc(), Order.id.desc()).all()
+    filtered_count = query.count()
+    total_pages = max(1, (filtered_count + PAGE_SIZE - 1) // PAGE_SIZE) if filtered_count else 1
+    page = min(_parse_page(page), total_pages)
+    orders = (
+        query.order_by(Order.created_at.desc(), Order.id.desc())
+        .offset((page - 1) * PAGE_SIZE)
+        .limit(PAGE_SIZE)
+        .all()
+    )
+    range_start = 0 if filtered_count == 0 else (page - 1) * PAGE_SIZE + 1
+    range_end = min(page * PAGE_SIZE, filtered_count)
 
     cid = customer.id if customer is not None else None
     return templates.TemplateResponse(
@@ -140,8 +168,18 @@ def orders_list(
             "status_filter": status_filter,
             "customer": customer,
             "total_count": total_count,
-            "filtered_count": len(orders),
+            "filtered_count": filtered_count,
             "counts": counts,
+            "page": page,
+            "total_pages": total_pages,
+            "range_start": range_start,
+            "range_end": range_end,
+            "page_numbers": list(range(1, total_pages + 1)),
+            "page_href": lambda n: _orders_href(
+                customer_id=cid,
+                status=status_filter or None,
+                page=n,
+            ),
             "filters": [
                 ("all", "All", total_count, _orders_href(customer_id=cid))
             ]

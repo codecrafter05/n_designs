@@ -76,6 +76,14 @@ body {
   color: #fff;
 }
 
+.pagination .page-link { color: var(--admin-ink); }
+.pagination .page-item.active .page-link {
+  background: var(--admin-ink);
+  border-color: var(--admin-ink);
+  color: #fff;
+}
+.pagination .page-item.disabled .page-link { color: #adb5bd; }
+
 /* Alerts */
 .alert-admin,
 .alert-admin-success,
