@@ -26,7 +26,7 @@
         <label class="create-account">
           <input type="checkbox" name="create_account" value="1" id="createAccount"
                  {% if create_account %}checked{% endif %}>
-          Create an account for faster checkout next time
+          Create an account and get 10% off your next order
         </label>
         <div class="field full create-account-pass{% if create_account %} is-open{% endif %}" id="createAccountPass">
           <label for="account_password">Password</label>
@@ -113,12 +113,19 @@
       </div>
       {% endfor %}
       <div class="summary-row"><span>Subtotal</span><span>{{ cart_subtotal_label }}</span></div>
+      {% if account_offer %}
+      <p class="account-offer-note">You're getting 10% off this order.</p>
+      {% endif %}
       <div class="summary-row" id="discountRow" {% if not discount_code %}hidden{% endif %}>
         <span>
           Discount (<span id="discountCodeLabel">{{ discount_code or '' }}</span>)
           <button type="button" class="promo-remove" id="removePromo">Remove</button>
         </span>
         <span id="discountAmount">− {{ discount_amount_label }}</span>
+      </div>
+      <div class="summary-row" id="accountOfferRow" {% if not account_offer %}hidden{% endif %}>
+        <span>Account offer (10%)</span>
+        <span id="accountOfferAmount">− {{ account_offer_label }}</span>
       </div>
       <div class="summary-row"><span>Shipping</span><span id="shippingLabel">{{ shipping_label }}</span></div>
       <p class="shipping-note" id="shippingNote" {% if shipping_available %}hidden{% endif %}>{{ shipping_message or '' }}</p>

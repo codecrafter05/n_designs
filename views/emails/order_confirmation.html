@@ -25,6 +25,9 @@
               Your order <strong style="color:#131210;">{{ order_number }}</strong> is in
               ({{ order_date }}). We'll contact you by phone or WhatsApp to confirm delivery.
               Please have cash ready for the courier.
+              {% if account_offer_granted %}
+              You created an account with us. Your next order will get 10% off.
+              {% endif %}
             </td>
           </tr>
           <tr>
@@ -57,6 +60,12 @@
                 <tr>
                   <td style="padding:6px 0;">Discount ({{ discount_code }})</td>
                   <td align="right" style="padding:6px 0;">− {{ discount_amount_label }}</td>
+                </tr>
+                {% endif %}
+                {% if account_discount_label %}
+                <tr>
+                  <td style="padding:6px 0;">Account offer (10%)</td>
+                  <td align="right" style="padding:6px 0;">− {{ account_discount_label }}</td>
                 </tr>
                 {% endif %}
                 <tr>

@@ -21,6 +21,9 @@
       <div class="d-flex flex-wrap align-items-center gap-3">
         <h4 class="fw-bold mb-0">{{ number }}</h4>
         <span class="{{ chip.badge_class }} d-inline-block px-2 py-1 mb-0">{{ chip.label }}</span>
+        {% if account_discount_label %}
+        <span class="alert-admin-success d-inline-block px-2 py-1 mb-0">10% account offer</span>
+        {% endif %}
         <span class="text-secondary">Placed {{ placed_label }}</span>
       </div>
     </div>
@@ -80,6 +83,12 @@
           <div class="d-flex justify-content-between mb-2">
             <span>Discount ({{ discount_code }})</span>
             <span>− {{ discount_amount_label }}</span>
+          </div>
+          {% endif %}
+          {% if account_discount_label %}
+          <div class="d-flex justify-content-between mb-2">
+            <span>Account offer (10%)</span>
+            <span>− {{ account_discount_label }}</span>
           </div>
           {% endif %}
           <div class="d-flex justify-content-between mb-2">

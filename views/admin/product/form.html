@@ -90,7 +90,7 @@
           <h5 class="mb-0">Inventory</h5>
           <button type="button" class="btn btn-admin-primary" id="add-color">Add Color</button>
         </div>
-        <p class="form-text mt-0 mb-3">Price is the regular price. Discount is optional — fill it with a lower price to put that size on sale, leave it empty otherwise.</p>
+        <p class="form-text mt-0 mb-3">The customer picks length first, then body size. Leave length empty for pieces that only have a body size, such as One Size. Price is the regular price. Discount is optional — fill it with a lower price to put that row on sale, leave it empty otherwise.</p>
         <div id="inventory" class="d-flex flex-column gap-3"></div>
       </div>
     </div>
@@ -213,8 +213,33 @@
     return 'warn';
   }
 
+  var LENGTHS = ['48"', '50"', '52"', '54"', '56"', '58"', '60"', '62"'];
+  var BODY_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', '4XL', 'One Size'];
+
+  function splitFit(size) {
+    var parts = (size || '').split(' · ');
+    if (parts.length === 2 && /"$/.test(parts[0])) {
+      return { length: parts[0], body: parts[1] };
+    }
+    return { length: '', body: size || '' };
+  }
+
+  function optionList(values, selected, placeholder) {
+    var html = '<option value="">' + placeholder + '</option>';
+    var seen = {};
+    values.forEach(function (value) {
+      seen[value] = true;
+      html += '<option value="' + escapeHtml(value) + '"' + (value === selected ? ' selected' : '') + '>' + escapeHtml(value) + '</option>';
+    });
+    if (selected && !seen[selected]) {
+      html += '<option value="' + escapeHtml(selected) + '" selected>' + escapeHtml(selected) + '</option>';
+    }
+    return html;
+  }
+
   function variantRow(data) {
     data = data || {};
+    var fit = splitFit(data.size || '');
     var price = data.price || '';
     var compare = data.compare_at_price || '';
     var state = saleState(price, compare);
@@ -223,9 +248,13 @@
         '<div class="card-body py-3">' +
           (data.id ? '<input type="hidden" class="v-id" value="' + data.id + '">' : '') +
           '<div class="row g-3 align-items-end">' +
-            '<div class="col-md-3">' +
-              '<label class="form-label">Size</label>' +
-              '<input class="form-control v-size" type="text" placeholder="e.g. XL" value="' + escapeHtml(data.size || '') + '">' +
+            '<div class="col-md-2">' +
+              '<label class="form-label">Length</label>' +
+              '<select class="form-select v-length">' + optionList(LENGTHS, fit.length, 'Length') + '</select>' +
+            '</div>' +
+            '<div class="col-md-2">' +
+              '<label class="form-label">Body size</label>' +
+              '<select class="form-select v-body">' + optionList(BODY_SIZES, fit.body, 'Size') + '</select>' +
             '</div>' +
             '<div class="col-md-2">' +
               '<label class="form-label">Qty</label>' +
@@ -323,13 +352,15 @@
       var sizes = {};
       group.querySelectorAll('.prod-variant-row').forEach(function (row) {
         if (error) return;
-        var size = row.querySelector('.v-size').value.trim();
+        var length = row.querySelector('.v-length').value.trim();
+        var body = row.querySelector('.v-body').value.trim();
         var qty = row.querySelector('.v-qty').value;
         var price = row.querySelector('.v-price').value;
         var compare = row.querySelector('.v-compare').value.trim();
         var idEl = row.querySelector('.v-id');
-        if (!size) { error = 'Every size under “' + name + '” needs a label.'; return; }
-        if (sizes[size.toLowerCase()]) { error = '“' + name + '” has a duplicate size “' + size + '”.'; return; }
+        if (!body) { error = 'Every row under “' + name + '” needs a body size.'; return; }
+        var size = length ? (length + ' · ' + body) : body;
+        if (sizes[size.toLowerCase()]) { error = '“' + name + '” has a duplicate “' + size + '”.'; return; }
         sizes[size.toLowerCase()] = true;
         var p = parseFloat(price);
         if (!(p > 0)) { error = 'Price for “' + name + ' / ' + size + '” must be greater than zero.'; return; }

@@ -60,6 +60,9 @@ class PaymentSession(Base):
     discount_code_snapshot: Mapped[str | None] = mapped_column(
         String(50), nullable=True
     )
+    account_discount_amount: Mapped[float | None] = mapped_column(
+        Numeric(12, 3), nullable=True
+    )
     items_json: Mapped[str] = mapped_column(Text, nullable=False)
     tap_charge_id: Mapped[str | None] = mapped_column(
         String(64), nullable=True, index=True

@@ -46,6 +46,7 @@
           <tr>
             <td style="padding:8px;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#5c5850;">
               {% if discount_code %}Discount ({{ discount_code }}): − {{ discount_amount_label }}<br>{% endif %}
+              {% if account_discount_label %}Account offer (10%): − {{ account_discount_label }}<br>{% endif %}
               Payment: {{ payment_method }}<br>
               <strong style="color:#131210;">Total: {{ total_label }}</strong>
             </td>

@@ -419,15 +419,15 @@ body.nav-open{overflow:hidden;}
 .wa-btn{
   position:fixed;right:26px;bottom:26px;z-index:300;
   width:56px;height:56px;border-radius:50%;
-  background:var(--ink);color:var(--on-dark);
+  background:#25D366;color:#fff;
   display:flex;align-items:center;justify-content:center;
-  box-shadow:0 10px 30px rgba(19,18,16,.3);
+  box-shadow:0 10px 30px rgba(37,211,102,.35);
   transition:transform .3s var(--ease);
 }
 .wa-btn:hover{transform:translateY(-3px) scale(1.04);}
 .wa-btn svg{width:26px;height:26px;}
 .wa-ring{
-  position:absolute;inset:-6px;border-radius:50%;border:1px solid var(--ink);
+  position:absolute;inset:-6px;border-radius:50%;border:1px solid #25D366;
   opacity:0;animation:waPulse 2.8s ease-out infinite;
 }
 @keyframes waPulse{

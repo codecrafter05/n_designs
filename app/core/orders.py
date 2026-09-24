@@ -34,6 +34,7 @@ logger = logging.getLogger(__name__)
 SHIPPING_BHD = Decimal("3.000")
 PAYMENT_COD = "Cash on Delivery"
 PAYMENT_TAP = "Card (Tap)"
+ACCOUNT_OFFER_RATE = Decimal("0.10")
 
 
 class CheckoutGone(Exception):
@@ -70,6 +71,11 @@ def fmt_bhd(amount) -> str:
 
 def as_money(value) -> Decimal:
     return Decimal(str(value or 0)).quantize(Decimal("0.001"))
+
+
+def account_offer_amount(subtotal) -> Decimal:
+    """10% of merchandise, before shipping and before any promo code."""
+    return (as_money(subtotal) * ACCOUNT_OFFER_RATE).quantize(Decimal("0.001"))
 
 
 @dataclass
@@ -113,6 +119,7 @@ class PreparedCheckout:
     shipping: Decimal
     discount_row: DiscountCode | None
     applied_discount: Decimal
+    account_discount: Decimal
     total: Decimal
 
 
@@ -247,6 +254,12 @@ def order_email_payload(
         "discount_amount_label": (
             fmt_bhd(applied_discount) if discount_code else None
         ),
+        "account_offer_granted": bool(order.account_offer_granted),
+        "account_discount_label": (
+            fmt_bhd(order.account_discount_amount)
+            if order.account_discount_amount
+            else None
+        ),
         "shipping_label": fmt_bhd(shipping),
         "total_label": fmt_bhd(total),
         "confirmation_url": f"{site}/order-confirmation/{order.id}",
@@ -254,7 +267,9 @@ def order_email_payload(
     }
 
 
-def prepare_checkout(db: Session, cart: Cart, country: str) -> PreparedCheckout:
+def prepare_checkout(
+    db: Session, cart: Cart, country: str, customer: Customer | None = None
+) -> PreparedCheckout:
     locked = (
         db.query(Cart).filter(Cart.id == cart.id).with_for_update().first()
     )
@@ -300,7 +315,17 @@ def prepare_checkout(db: Session, cart: Cart, country: str) -> PreparedCheckout:
             db.commit()
             raise CheckoutDiscountGone()
         applied_discount = discount_amount(cart, discount_row)
-    total = subtotal - applied_discount + shipping
+    account_discount = Decimal("0.000")
+    if customer is not None and customer.next_order_discount:
+        account_discount = account_offer_amount(subtotal)
+        room = subtotal - applied_discount
+        if room < 0:
+            room = Decimal("0.000")
+        if account_discount > room:
+            account_discount = room.quantize(Decimal("0.001"))
+    total = (subtotal - applied_discount - account_discount + shipping).quantize(
+        Decimal("0.001")
+    )
     return PreparedCheckout(
         cart=cart,
         lines=lines,
@@ -308,6 +333,7 @@ def prepare_checkout(db: Session, cart: Cart, country: str) -> PreparedCheckout:
         shipping=shipping,
         discount_row=discount_row,
         applied_discount=applied_discount,
+        account_discount=account_discount,
         total=total,
     )
 
@@ -479,7 +505,6 @@ def finalize_order(
         )
     except ShippingUnavailable as exc:
         raise CheckoutBlocked(exc.message) from exc
-    total = (subtotal - applied_discount + shipping).quantize(Decimal("0.001"))
 
     discount_code_id = None
     discount_code_snapshot = None
@@ -520,6 +545,43 @@ def finalize_order(
         account_password,
         password_hash,
     )
+    account_discount = Decimal("0.000")
+    granted_offer = False
+    if customer is not None:
+        customer = (
+            db.query(Customer)
+            .filter(Customer.id == customer.id)
+            .with_for_update()
+            .first()
+        )
+        prior_orders = (
+            db.query(func.count(Order.id))
+            .filter(Order.customer_id == customer.id)
+            .scalar()
+            or 0
+        )
+        if login_after and prior_orders == 0:
+            customer.next_order_discount = True
+            granted_offer = True
+        elif customer.next_order_discount or (
+            honor_discount_snapshot
+            and payment_session is not None
+            and payment_session.account_discount_amount
+        ):
+            if honor_discount_snapshot and payment_session is not None:
+                account_discount = as_money(payment_session.account_discount_amount)
+            else:
+                account_discount = account_offer_amount(subtotal)
+            room = as_money(subtotal) - as_money(applied_discount)
+            if room < 0:
+                room = Decimal("0.000")
+            if account_discount > room:
+                account_discount = room
+            if account_discount > 0 and customer.next_order_discount:
+                customer.next_order_discount = False
+    total = (
+        as_money(subtotal) - as_money(applied_discount) - account_discount + as_money(shipping)
+    ).quantize(Decimal("0.001"))
     shipping_address = f"{form['address']}, {form['city']}, {form['country']}"
     order = Order(
         customer_id=customer.id if customer is not None else None,
@@ -531,6 +593,8 @@ def finalize_order(
         discount_code_id=discount_code_id,
         discount_amount=discount_amount_value,
         discount_code_snapshot=discount_code_snapshot,
+        account_discount_amount=account_discount if account_discount > 0 else None,
+        account_offer_granted=granted_offer,
         tap_charge_id=tap_charge_id,
     )
     db.add(order)

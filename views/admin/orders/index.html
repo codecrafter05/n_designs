@@ -90,7 +90,12 @@
               <td>
                 <span class="{{ row.badge_class }} d-inline-block px-2 py-1 mb-0">{{ row.label }}</span>
               </td>
-              <td>{{ row.payment_method }}</td>
+              <td>
+                {{ row.payment_method }}
+                {% if row.account_offer %}
+                <div class="alert-admin-success d-inline-block px-2 py-1 mt-1 mb-0">10% account offer</div>
+                {% endif %}
+              </td>
               <td class="text-secondary">{{ row.placed_label }}</td>
               <td class="text-end">
                 <a href="/admin/orders/{{ row.id }}" class="btn btn-sm btn-admin-secondary">View</a>

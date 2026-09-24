@@ -82,6 +82,7 @@ def _list_row(order: Order) -> dict:
         "customer_email": customer.email if customer and customer.email else "—",
         "total_label": _fmt_bhd(order.total),
         "payment_method": order.payment_method,
+        "account_offer": bool(order.account_discount_amount),
         "placed_label": _fmt_dt(order.created_at),
         **chip,
     }
@@ -195,7 +196,8 @@ def orders_detail(order_id: int, request: Request, db: Session = Depends(get_db)
         else SHIPPING_BHD
     )
     discount_amount = Decimal(str(order.discount_amount or 0))
-    computed_total = items_subtotal - discount_amount + shipping
+    account_discount = Decimal(str(order.account_discount_amount or 0))
+    computed_total = items_subtotal - discount_amount - account_discount + shipping
     stored_total = Decimal(str(order.total)).quantize(Decimal("0.001"))
     total_mismatch = computed_total.quantize(Decimal("0.001")) != stored_total
 
@@ -212,6 +214,9 @@ def orders_detail(order_id: int, request: Request, db: Session = Depends(get_db)
             "items_subtotal_label": _fmt_bhd(items_subtotal),
             "discount_code": order.discount_code_snapshot,
             "discount_amount_label": _fmt_bhd(discount_amount),
+            "account_discount_label": (
+                _fmt_bhd(account_discount) if account_discount else None
+            ),
             "shipping_label": _fmt_bhd(shipping),
             "computed_total_label": _fmt_bhd(computed_total),
             "stored_total_label": _fmt_bhd(stored_total),

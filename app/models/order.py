@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, Integer, Numeric, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, Numeric, String, Text, false
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -42,6 +42,12 @@ class Order(Base):
     )
     discount_code_snapshot: Mapped[str | None] = mapped_column(
         String(50), nullable=True
+    )
+    account_discount_amount: Mapped[float | None] = mapped_column(
+        Numeric(12, 3), nullable=True
+    )
+    account_offer_granted: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default=false(), nullable=False
     )
     tap_charge_id: Mapped[str | None] = mapped_column(
         String(64), nullable=True, index=True

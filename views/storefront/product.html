@@ -56,6 +56,11 @@
           <button type="button" data-open-size-guide>Size Guide</button>
         </div>
         <div class="sizes" id="sizes"></div>
+        <div class="fit-fields" id="fitFields" hidden>
+          <select class="fit-select" id="lengthSelect" aria-label="Length"></select>
+          <label class="fit-body-label" for="bodySelect">Body size</label>
+          <select class="fit-select" id="bodySelect" aria-label="Body size"></select>
+        </div>
       </div>
 
       <div class="pdp-actions">
@@ -118,11 +123,16 @@
   var CATALOG = JSON.parse({{ catalog_json | tojson }});
   var swatchesEl = document.getElementById('swatches');
   var sizesEl = document.getElementById('sizes');
+  var fitFields = document.getElementById('fitFields');
+  var lengthSelect = document.getElementById('lengthSelect');
+  var bodySelect = document.getElementById('bodySelect');
   var priceEl = document.getElementById('pdpPrice');
   var colorLabel = document.getElementById('colorLabel');
   var sizeLabel = document.getElementById('sizeLabel');
   var colorIndex = 0;
   var sizeIndex = 0;
+  var chosenLength = '';
+  var chosenBody = '';
   var addBtn = document.getElementById('addToBag');
 
   function firstInStock(variants) {
@@ -144,10 +154,84 @@
     }
   }
 
+  function currentVariants() {
+    var color = CATALOG.colors[colorIndex];
+    return color && color.variants ? color.variants : [];
+  }
+
+  function usesFit(variants) {
+    return variants.length > 0 && variants.every(function (variant) { return variant.length; });
+  }
+
+  function selectedVariant() {
+    var variants = currentVariants();
+    if (usesFit(variants)) {
+      for (var i = 0; i < variants.length; i++) {
+        if (variants[i].length === chosenLength && variants[i].body === chosenBody) return variants[i];
+      }
+      return null;
+    }
+    return variants[sizeIndex] || null;
+  }
+
+  function fillSelect(select, values, selected, labelFor) {
+    select.innerHTML = '';
+    values.forEach(function (value) {
+      var option = document.createElement('option');
+      option.value = value;
+      option.textContent = labelFor ? labelFor(value) : value;
+      if (value === selected) option.selected = true;
+      select.appendChild(option);
+    });
+  }
+
+  function renderFit(variants) {
+    sizesEl.hidden = true;
+    sizesEl.innerHTML = '';
+    fitFields.hidden = false;
+    var lengths = [];
+    variants.forEach(function (variant) {
+      if (lengths.indexOf(variant.length) === -1) lengths.push(variant.length);
+    });
+    if (lengths.indexOf(chosenLength) === -1) {
+      var start = variants[firstInStock(variants)];
+      chosenLength = start ? start.length : lengths[0];
+    }
+    fillSelect(lengthSelect, lengths, chosenLength, function (value) { return value; });
+    var bodies = variants.filter(function (variant) { return variant.length === chosenLength; });
+    var bodyValues = bodies.map(function (variant) { return variant.body; });
+    if (bodyValues.indexOf(chosenBody) === -1) {
+      var inStock = null;
+      for (var i = 0; i < bodies.length; i++) {
+        if (bodies[i].stock > 0) { inStock = bodies[i]; break; }
+      }
+      chosenBody = (inStock || bodies[0] || {}).body || '';
+    }
+    bodySelect.innerHTML = '';
+    bodies.forEach(function (variant) {
+      var option = document.createElement('option');
+      option.value = variant.body;
+      option.textContent = variant.stock > 0 ? variant.body : variant.body + ' — Out of stock';
+      option.disabled = variant.stock <= 0;
+      if (variant.body === chosenBody) option.selected = true;
+      bodySelect.appendChild(option);
+    });
+    var selected = selectedVariant();
+    sizeLabel.textContent = 'Length';
+    renderPrice(selected);
+    if (addBtn) addBtn.disabled = !(selected && selected.stock > 0);
+  }
+
   function renderSizes() {
     var color = CATALOG.colors[colorIndex];
     if (!color) return;
     var variants = color.variants || [];
+    if (usesFit(variants)) {
+      renderFit(variants);
+      return;
+    }
+    fitFields.hidden = true;
+    sizesEl.hidden = false;
     sizesEl.innerHTML = '';
     if (!variants.length) {
       sizeLabel.textContent = 'Size';
@@ -193,6 +277,8 @@
       swatch.addEventListener('click', function () {
         colorIndex = i;
         sizeIndex = firstInStock(color.variants || []);
+        chosenLength = '';
+        chosenBody = '';
         renderSwatches();
         renderSizes();
       });
@@ -200,6 +286,20 @@
     });
     var current = CATALOG.colors[colorIndex];
     if (current && colorLabel) colorLabel.textContent = 'Colour — ' + current.name;
+  }
+
+  if (lengthSelect) {
+    lengthSelect.addEventListener('change', function () {
+      chosenLength = lengthSelect.value;
+      chosenBody = '';
+      renderSizes();
+    });
+  }
+  if (bodySelect) {
+    bodySelect.addEventListener('change', function () {
+      chosenBody = bodySelect.value;
+      renderSizes();
+    });
   }
 
   if (CATALOG.colors && CATALOG.colors.length) {
@@ -238,8 +338,7 @@
 
   if (addBtn) {
     addBtn.addEventListener('click', function () {
-      var color = CATALOG.colors[colorIndex];
-      var variant = color && color.variants ? color.variants[sizeIndex] : null;
+      var variant = selectedVariant();
       if (!variant || variant.stock <= 0) return;
       addBtn.disabled = true;
       fetch('/cart/add', {

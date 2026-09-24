@@ -50,6 +50,12 @@
       {% if order_discount_code %}
       <div class="summary-row"><span>Discount ({{ order_discount_code }})</span><span>− {{ order_discount_amount_label }}</span></div>
       {% endif %}
+      {% if order.account_discount_amount %}
+      <div class="summary-row"><span>Account offer (10%)</span><span>− {{ order_account_discount_label }}</span></div>
+      {% endif %}
+      {% if order.account_offer_granted %}
+      <p class="account-offer-note">You created an account with us. Your next order will get 10% off.</p>
+      {% endif %}
       <div class="summary-row"><span>Shipping</span><span>{{ order_shipping_label }}</span></div>
       <div class="summary-row total"><span>Total</span><span>{{ order_total_label }}</span></div>
       <a href="/categories" class="btn btn-primary btn-block" style="margin-top:22px;">Continue Shopping</a>

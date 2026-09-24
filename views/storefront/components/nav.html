@@ -7,8 +7,7 @@
         <path d="M4 7h16M4 12h16M4 17h16"/>
       </svg>
     </button>
-    <a href="/" class="nav-link">Shop</a>
-    <a href="/categories" class="nav-link">Categories</a>
+    <a href="/" class="nav-link">Home</a>
     <a href="/collections" class="nav-link">Collections</a>
     <a href="/sale" class="nav-link">Sale</a>
     <a href="/about" class="nav-link">About</a>
@@ -17,9 +16,11 @@
     <img src="/static/img/logo/{% if variant == 'hero' %}logo-light-one.png{% else %}logo-dark-one.png{% endif %}" alt="By N Designs" id="navLogo">
   </a>
   <div class="nav-side right">
+    <!--
     <button class="icon-btn" aria-label="Search">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
     </button>
+    -->
     <a class="icon-btn" href="{{ '/account' if current_customer else '/login' }}"
        aria-label="{{ 'Account' if current_customer else 'Login' }}">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.6-4 5-6 8-6s6.4 2 8 6"/></svg>
@@ -42,8 +43,7 @@
     </button>
   </div>
   <nav class="nav-drawer-links">
-    <a href="/">Shop</a>
-    <a href="/categories">Categories</a>
+    <a href="/">Home</a>
     <a href="/collections">Collections</a>
     <a href="/sale">Sale</a>
     <a href="/about">About</a>

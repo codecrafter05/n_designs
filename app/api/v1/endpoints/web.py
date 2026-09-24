@@ -31,6 +31,7 @@ from app.core.orders import (
     CheckoutDiscountGone,
     CheckoutFailed,
     CheckoutGone,
+    account_offer_amount,
     as_money,
     finalize_order,
     form_from_session,
@@ -277,16 +278,26 @@ def _sale_card(product: Product, index: int = 0) -> dict:
     return card
 
 
+def _split_fit(size: str) -> tuple[str, str]:
+    parts = (size or "").split(" · ", 1)
+    if len(parts) == 2 and parts[0].endswith('"'):
+        return parts[0], parts[1]
+    return "", size or ""
+
+
 def _pdp_payload(product: Product) -> str:
     colors = []
     for color in product.colors:
         variants = []
         for variant in color.variants:
             on_sale = _is_on_sale(variant)
+            length, body = _split_fit(variant.size)
             variants.append(
                 {
                     "id": variant.id,
                     "size": variant.size,
+                    "length": length,
+                    "body": body,
                     "stock": variant.stock_quantity,
                     "current_label": _fmt_bhd(_payable(variant)),
                     "was_label": _fmt_bhd(variant.price) if on_sale else None,
@@ -668,7 +679,14 @@ def _checkout_page(
         shipping_available = False
         shipping_message = exc.message
     promo = _promo_vars(cart)
-    total_label = _fmt_bhd(promo["cart_payable_total"] + shipping) if shipping is not None else "—"
+    account_discount = Decimal("0")
+    if customer is not None and customer.next_order_discount:
+        account_discount = account_offer_amount(promo["cart_subtotal"])
+        room = promo["cart_payable_total"]
+        if account_discount > room:
+            account_discount = room
+    goods = promo["cart_payable_total"] - account_discount
+    total_label = _fmt_bhd(goods + shipping) if shipping is not None else "—"
     return _storefront_page(
         request,
         "storefront/checkout.html",
@@ -683,6 +701,8 @@ def _checkout_page(
         checkout_error=error,
         logged_in=customer is not None,
         create_account=create_account,
+        account_offer=account_discount > 0,
+        account_offer_label=_fmt_bhd(account_discount),
         **promo,
     )
 
@@ -738,6 +758,9 @@ def _start_tap_checkout(
         discount_code_id=discount_id,
         discount_amount=applied_discount if discount_id is not None else None,
         discount_code_snapshot=discount_code,
+        account_discount_amount=(
+            prepared.account_discount if prepared.account_discount > 0 else None
+        ),
         items_json=items_json,
     )
     db.add(session)
@@ -797,6 +820,12 @@ def checkout_shipping(request: Request, country: str = "", db: Session = Depends
             }
         )
     promo = cart_pricing(cart)
+    customer = get_current_customer(request, db)
+    account_discount = Decimal("0")
+    if customer is not None and customer.next_order_discount:
+        account_discount = account_offer_amount(promo.subtotal)
+        if account_discount > promo.payable_total:
+            account_discount = promo.payable_total
     try:
         shipping = calculate_shipping(db, dest, cart_weight_kg(cart))
     except ShippingUnavailable as exc:
@@ -809,7 +838,7 @@ def checkout_shipping(request: Request, country: str = "", db: Session = Depends
                 "total_label": "—",
             }
         )
-    total = promo.payable_total + shipping
+    total = promo.payable_total - account_discount + shipping
     return JSONResponse(
         {
             "ok": True,
@@ -922,7 +951,7 @@ def storefront_checkout_submit(
         return RedirectResponse(url="/cart", status_code=303)
 
     try:
-        prepared = prepare_checkout(db, cart, form["country"])
+        prepared = prepare_checkout(db, cart, form["country"], logged_in)
     except CheckoutGone:
         db.rollback()
         return RedirectResponse(url="/cart", status_code=303)
@@ -1201,6 +1230,11 @@ def storefront_order_confirmation(
         order_discount_amount_label=(
             _fmt_bhd(order.discount_amount)
             if order.discount_code_snapshot
+            else None
+        ),
+        order_account_discount_label=(
+            _fmt_bhd(order.account_discount_amount)
+            if order.account_discount_amount
             else None
         ),
         order_shipping_label=_fmt_bhd(
