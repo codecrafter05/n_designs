@@ -98,6 +98,8 @@ legend{
   font-size:13px;color:var(--ink-70);line-height:1.6;margin:0 0 12px;
 }
 .shipping-note[hidden]{display:none;}
+#codCaptcha{margin-top:16px;}
+#codCaptcha[hidden]{display:none;}
 #placeOrder:disabled{opacity:.45;cursor:not-allowed;}
 
 @media (max-width:900px){

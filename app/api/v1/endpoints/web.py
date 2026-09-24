@@ -16,6 +16,7 @@ from app.core.config import Settings, settings
 from app.core.customer_auth import create_customer_session, get_current_customer
 from app.core.database import get_db
 from app.core.discounts import REMOVED_AT_CHECKOUT, cart_pricing
+from app.core.math_captcha import CAPTCHA_WRONG, answer_is_correct, new_challenge
 from app.core.form_protection import (
     RATE_LIMIT_MESSAGE,
     honeypot_filled,
@@ -652,6 +653,10 @@ def _form_from_customer(customer: Customer, country_names: list[str]) -> dict:
     )
 
 
+def _is_bahrain(country: str) -> bool:
+    return (country or "").strip().lower() == "bahrain"
+
+
 def _checkout_page(
     request: Request,
     db: Session,
@@ -659,6 +664,7 @@ def _checkout_page(
     form: dict | None = None,
     error: str | None = None,
     create_account: bool = False,
+    payment_method: str = "",
 ):
     cart, _, _ = get_or_create_cart(db, request)
     lines, _subtotal = _cart_lines(cart)
@@ -670,6 +676,12 @@ def _checkout_page(
     if form is None and customer is not None:
         form = _form_from_customer(customer, names)
     form = _checkout_form(form, country_names=names)
+    cod_allowed = _is_bahrain(form["country"])
+    chosen_payment = payment_method if payment_method in ("cod", "online") else ""
+    if chosen_payment == "cod" and not cod_allowed:
+        chosen_payment = "online"
+    if not chosen_payment:
+        chosen_payment = "cod" if cod_allowed else "online"
     shipping = None
     shipping_available = True
     shipping_message = None
@@ -701,6 +713,9 @@ def _checkout_page(
         checkout_error=error,
         logged_in=customer is not None,
         create_account=create_account,
+        payment_method=chosen_payment,
+        cod_allowed=cod_allowed,
+        captcha=new_challenge(),
         account_offer=account_discount > 0,
         account_offer_label=_fmt_bhd(account_discount),
         **promo,
@@ -888,6 +903,8 @@ def storefront_checkout_submit(
     create_account: str = Form(""),
     account_password: str = Form(""),
     website_url: str = Form(""),
+    captcha_token: str = Form(""),
+    captcha_answer: str = Form(""),
 ):
     names = country_names(load_country_groups(db))
     form = _checkout_form(
@@ -912,6 +929,7 @@ def storefront_checkout_submit(
             form=form,
             error=message,
             create_account=want_account,
+            payment_method=payment_method,
         )
 
     if honeypot_filled(website_url):
@@ -938,6 +956,10 @@ def storefront_checkout_submit(
         return fail("Please enter a valid email.")
     if payment_method not in ("cod", "online"):
         return fail("Please choose a payment method.")
+    if payment_method == "cod" and not _is_bahrain(form["country"]):
+        return fail("Cash on delivery is available in Bahrain only.")
+    if payment_method == "cod" and not answer_is_correct(captcha_token, captcha_answer):
+        return fail(CAPTCHA_WRONG)
     if want_account and len(account_password) < 8:
         return fail("Password must be at least 8 characters.")
     chosen = canonical_country_name(db, country)

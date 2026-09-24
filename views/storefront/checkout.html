@@ -79,14 +79,20 @@
       <fieldset>
         <legend>Payment</legend>
         <div class="pay-options">
-          <label class="pay-option">
-            <input type="radio" name="payment_method" value="online">
+          <label class="pay-option{% if payment_method == 'online' %} is-active{% endif %}" id="payOnline">
+            <input type="radio" name="payment_method" value="online"{% if payment_method == 'online' %} checked{% endif %}>
             Pay Online
           </label>
-          <label class="pay-option is-active">
-            <input type="radio" name="payment_method" value="cod" checked>
+          <label class="pay-option{% if payment_method == 'cod' %} is-active{% endif %}{% if not cod_allowed %} is-disabled{% endif %}" id="payCod">
+            <input type="radio" name="payment_method" value="cod"{% if payment_method == 'cod' %} checked{% endif %}{% if not cod_allowed %} disabled{% endif %}>
             Cash on Delivery
           </label>
+        </div>
+        <p class="shipping-note" id="codNote"{% if cod_allowed %} hidden{% endif %}>Cash on delivery is available in Bahrain only.</p>
+        <div class="field" id="codCaptcha"{% if payment_method != 'cod' %} hidden{% endif %}>
+          <input type="hidden" name="captcha_token" id="captchaToken" value="{{ captcha.token }}">
+          <label for="captcha_answer" id="captchaQuestion">{{ captcha.question }}</label>
+          <input id="captcha_answer" name="captcha_answer" type="number" inputmode="numeric" autocomplete="off"{% if payment_method == 'cod' %} required{% endif %}>
         </div>
       </fieldset>
 
@@ -169,21 +175,58 @@
   }
   {% endif %}
 
-  document.querySelectorAll('.pay-option:not(.is-disabled)').forEach(function (option) {
+  var codNote = document.getElementById('codNote');
+  var codCaptcha = document.getElementById('codCaptcha');
+  var captchaAnswer = document.getElementById('captcha_answer');
+  var payCod = document.getElementById('payCod');
+  var payOnline = document.getElementById('payOnline');
+
+  function bahrainSelected() {
+    return ((countrySelect && countrySelect.value) || '').trim().toLowerCase() === 'bahrain';
+  }
+
+  function selectedPayment() {
+    var picked = form && form.querySelector('input[name="payment_method"]:checked');
+    return picked ? picked.value : '';
+  }
+
+  function syncPayment() {
+    var allowed = bahrainSelected();
+    var codInput = payCod ? payCod.querySelector('input') : null;
+    var onlineInput = payOnline ? payOnline.querySelector('input') : null;
+    if (payCod) payCod.classList.toggle('is-disabled', !allowed);
+    if (codInput) codInput.disabled = !allowed;
+    if (!allowed && codInput && codInput.checked && onlineInput) {
+      codInput.checked = false;
+      onlineInput.checked = true;
+    }
+    if (allowed && onlineInput && codInput && !onlineInput.checked && !codInput.checked) {
+      codInput.checked = true;
+    }
+    document.querySelectorAll('.pay-option').forEach(function (el) {
+      var input = el.querySelector('input');
+      el.classList.toggle('is-active', !!(input && input.checked && !input.disabled));
+    });
+    var showCaptcha = allowed && selectedPayment() === 'cod';
+    if (codNote) codNote.hidden = allowed;
+    if (codCaptcha) codCaptcha.hidden = !showCaptcha;
+    if (captchaAnswer) captchaAnswer.required = showCaptcha;
+    if (window.syncPayButton) window.syncPayButton();
+  }
+
+  document.querySelectorAll('.pay-option').forEach(function (option) {
     option.addEventListener('click', function () {
-      document.querySelectorAll('.pay-option').forEach(function (el) {
-        el.classList.remove('is-active');
-      });
-      option.classList.add('is-active');
+      if (option.classList.contains('is-disabled')) return;
       var input = option.querySelector('input');
       if (input && !input.disabled) input.checked = true;
-      if (window.syncPayButton) window.syncPayButton();
+      syncPayment();
     });
   });
 
   var form = document.getElementById('checkoutForm');
   var btn = document.getElementById('placeOrder');
   var countrySelect = document.getElementById('country');
+  syncPayment();
   var shippingLabel = document.getElementById('shippingLabel');
   var checkoutTotal = document.getElementById('checkoutTotal');
   var shippingNote = document.getElementById('shippingNote');
@@ -403,7 +446,10 @@
   }
 
   if (countrySelect) {
-    countrySelect.addEventListener('change', refreshShipping);
+    countrySelect.addEventListener('change', function () {
+      syncPayment();
+      refreshShipping();
+    });
   }
 
   var DRAFT_KEY = 'nd_checkout_draft';
