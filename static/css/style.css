@@ -448,6 +448,17 @@ body.nav-open{overflow:hidden;}
   .footer-grid{grid-template-columns:1fr 1fr;}
 }
 @media (max-width:760px){
+  .hero{
+    height:auto;min-height:0;
+    aspect-ratio:16/9;
+  }
+  .hero-image{
+    background-size:contain;
+    background-position:center center;
+  }
+  .hero-content{padding-bottom:28px;}
+  .hero-title{font-size:clamp(28px,7.2vw,48px);}
+  .hero-scroll{bottom:12px;}
   .nav-side{gap:16px;}
   .cat-grid{grid-template-columns:1fr;}
   .prod-grid{grid-template-columns:repeat(2,1fr);gap:22px 14px;}

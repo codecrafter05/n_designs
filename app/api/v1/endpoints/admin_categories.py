@@ -9,13 +9,11 @@ from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
-from app.api.v1.endpoints.auth import _get_current_user
 from app.core.database import get_db
 from app.core.slugs import unique_slug
 from app.core.uploads import delete_category_image, save_category_image
 from app.models.category import Category
 from app.models.product import Product
-from app.models.user import User
 
 router = APIRouter(tags=["admin-categories"])
 
@@ -168,7 +166,6 @@ def categories_edit(category_id: int, request: Request, db: Session = Depends(ge
 def categories_reorder(
     payload: ReorderPayload,
     db: Session = Depends(get_db),
-    _user: User = Depends(_get_current_user),
 ):
     if payload.parent_id is not None:
         parent = db.query(Category).filter(Category.id == payload.parent_id).first()
