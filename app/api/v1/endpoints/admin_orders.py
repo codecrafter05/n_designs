@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.api.v1.endpoints.web import _fmt_bhd
 from app.core.database import get_db
+from app.core.measurements import size_label
 from app.core.orders import SHIPPING_BHD, order_number
 from app.models.customer import Customer
 from app.models.order import Order, OrderItem
@@ -216,11 +217,20 @@ def orders_detail(order_id: int, request: Request, db: Session = Depends(get_db)
         unit = Decimal(str(item.price_at_purchase))
         line = unit * item.quantity
         items_subtotal += line
+        label = size_label(
+            is_custom=bool(getattr(item, "is_custom", False)),
+            custom_length=getattr(item, "custom_length", None),
+            custom_chest=getattr(item, "custom_chest", None),
+            variant_size=variant.size if variant else "—",
+            stored_label=getattr(item, "size_label", None),
+        )
+        comment = (getattr(item, "line_comment", None) or "").strip()
         items.append(
             {
                 "name": product.name if product else "Item",
                 "color": color.color_name if color else "—",
-                "size": variant.size if variant else "—",
+                "size": label,
+                "line_comment": comment,
                 "quantity": item.quantity,
                 "unit_label": _fmt_bhd(unit),
                 "line_label": _fmt_bhd(line),

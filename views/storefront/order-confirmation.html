@@ -35,6 +35,9 @@
         <div>
           <div class="n">{{ line.name }}</div>
           <div class="m">{{ line.color }} · {{ line.size }} · Qty {{ line.quantity }}</div>
+          {% if line.line_comment %}
+          <div class="m">Note: {{ line.line_comment }}</div>
+          {% endif %}
         </div>
         <div class="p">{{ line.line_label }}</div>
       </div>

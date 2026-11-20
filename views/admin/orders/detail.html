@@ -60,7 +60,12 @@
                     </div>
                   </td>
                   <td>{{ line.color }}</td>
-                  <td>{{ line.size }}</td>
+                  <td>
+                    {{ line.size }}
+                    {% if line.line_comment %}
+                    <div class="text-secondary small mt-1">Note: {{ line.line_comment }}</div>
+                    {% endif %}
+                  </td>
                   <td>{{ line.quantity }}</td>
                   <td>{{ line.unit_label }}</td>
                   <td>{{ line.line_label }}</td>

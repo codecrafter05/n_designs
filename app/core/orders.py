@@ -14,6 +14,7 @@ from app.core.cart import reload_cart
 from app.core.config import settings
 from app.core.discounts import discount_amount, is_usable
 from app.core.email import send_order_emails
+from app.core.measurements import save_customer_measurement, size_label
 from app.core.pricing import payable as _payable
 from app.core.security import hash_password
 from app.core.shipping import (
@@ -86,6 +87,11 @@ class LineSnap:
     name: str
     color: str
     size: str
+    is_custom: bool = False
+    custom_length: str = ""
+    custom_chest: str = ""
+    line_comment: str = ""
+    save_measurement: bool = False
 
     def as_json(self) -> dict:
         return {
@@ -95,6 +101,11 @@ class LineSnap:
             "name": self.name,
             "color": self.color,
             "size": self.size,
+            "is_custom": self.is_custom,
+            "custom_length": self.custom_length,
+            "custom_chest": self.custom_chest,
+            "line_comment": self.line_comment,
+            "save_measurement": self.save_measurement,
         }
 
     @property
@@ -102,11 +113,16 @@ class LineSnap:
         return (self.price_at_purchase * self.quantity).quantize(Decimal("0.001"))
 
     def email_line(self) -> dict:
+        meta = f"{self.color} · Size {self.size} · Qty {self.quantity}"
+        if self.line_comment:
+            meta = f"{meta} · Note: {self.line_comment}"
         return {
             "name": self.name,
             "color": self.color,
             "size": self.size,
             "quantity": self.quantity,
+            "line_comment": self.line_comment,
+            "meta": meta,
             "line_label": fmt_bhd(self.line_total),
         }
 
@@ -161,6 +177,16 @@ def snapshot_cart_lines(cart) -> tuple[list[LineSnap], Decimal]:
             continue
         product = variant.color.product
         price = _payable(variant)
+        is_custom = bool(getattr(item, "is_custom", False))
+        custom_length = (getattr(item, "custom_length", None) or "").strip()
+        custom_chest = (getattr(item, "custom_chest", None) or "").strip()
+        line_comment = (getattr(item, "line_comment", None) or "").strip()
+        label = size_label(
+            is_custom=is_custom,
+            custom_length=custom_length,
+            custom_chest=custom_chest,
+            variant_size=variant.size,
+        )
         lines.append(
             LineSnap(
                 product_variant_id=variant.id,
@@ -168,7 +194,12 @@ def snapshot_cart_lines(cart) -> tuple[list[LineSnap], Decimal]:
                 price_at_purchase=price,
                 name=product.name,
                 color=variant.color.color_name,
-                size=variant.size,
+                size=label,
+                is_custom=is_custom,
+                custom_length=custom_length,
+                custom_chest=custom_chest,
+                line_comment=line_comment,
+                save_measurement=bool(getattr(item, "save_measurement", False)),
             )
         )
         subtotal += price * item.quantity
@@ -179,6 +210,18 @@ def lines_from_json(raw: str) -> list[LineSnap]:
     rows = json.loads(raw or "[]")
     lines = []
     for row in rows:
+        is_custom = bool(row.get("is_custom"))
+        custom_length = str(row.get("custom_length") or "").strip()
+        custom_chest = str(row.get("custom_chest") or "").strip()
+        line_comment = str(row.get("line_comment") or "").strip()
+        stored_size = str(row.get("size") or "")
+        label = size_label(
+            is_custom=is_custom,
+            custom_length=custom_length,
+            custom_chest=custom_chest,
+            variant_size=stored_size,
+            stored_label=stored_size if stored_size else None,
+        )
         lines.append(
             LineSnap(
                 product_variant_id=int(row["product_variant_id"]),
@@ -186,7 +229,12 @@ def lines_from_json(raw: str) -> list[LineSnap]:
                 price_at_purchase=as_money(row["price_at_purchase"]),
                 name=str(row.get("name") or "Item"),
                 color=str(row.get("color") or ""),
-                size=str(row.get("size") or ""),
+                size=label,
+                is_custom=is_custom,
+                custom_length=custom_length,
+                custom_chest=custom_chest,
+                line_comment=line_comment,
+                save_measurement=bool(row.get("save_measurement")),
             )
         )
     return lines
@@ -608,9 +656,27 @@ def finalize_order(
                 product_variant_id=variant.id,
                 quantity=line.quantity,
                 price_at_purchase=line.price_at_purchase,
+                is_custom=bool(line.is_custom),
+                custom_length=line.custom_length or None,
+                custom_chest=line.custom_chest or None,
+                line_comment=line.line_comment or None,
+                size_label=line.size,
             )
         )
         variant.stock_quantity = variant.stock_quantity - line.quantity
+        if (
+            customer is not None
+            and line.is_custom
+            and line.save_measurement
+            and line.custom_length
+            and line.custom_chest
+        ):
+            save_customer_measurement(
+                db,
+                customer,
+                length=line.custom_length,
+                chest=line.custom_chest,
+            )
 
     if increment_row is not None:
         increment_row.times_used = increment_row.times_used + 1

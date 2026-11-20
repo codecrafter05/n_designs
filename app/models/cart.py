@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, false
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -47,12 +47,9 @@ class Cart(Base):
 
 
 class CartItem(Base):
-    """One variant line in a cart. Same variant twice increments quantity."""
+    """One line in a cart. Custom sizes and comments keep separate lines."""
 
     __tablename__ = "cart_items"
-    __table_args__ = (
-        UniqueConstraint("cart_id", "product_variant_id", name="uq_cart_item_variant"),
-    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     cart_id: Mapped[int] = mapped_column(
@@ -66,6 +63,15 @@ class CartItem(Base):
         index=True,
     )
     quantity: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    is_custom: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default=false(), nullable=False
+    )
+    custom_length: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    custom_chest: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    line_comment: Mapped[str | None] = mapped_column(Text, nullable=True)
+    save_measurement: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default=false(), nullable=False
+    )
     added_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc), nullable=False
     )

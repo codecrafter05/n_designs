@@ -88,6 +88,13 @@ class OrderItem(Base):
     )
     quantity: Mapped[int] = mapped_column(Integer, nullable=False)
     price_at_purchase: Mapped[float] = mapped_column(Numeric(12, 3), nullable=False)
+    is_custom: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default=false(), nullable=False
+    )
+    custom_length: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    custom_chest: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    line_comment: Mapped[str | None] = mapped_column(Text, nullable=True)
+    size_label: Mapped[str | None] = mapped_column(String(120), nullable=True)
 
     order: Mapped[Order] = relationship(back_populates="items")
     variant: Mapped[ProductVariant] = relationship(back_populates="order_items")

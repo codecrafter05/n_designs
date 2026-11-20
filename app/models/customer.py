@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, false
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, UniqueConstraint, false
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -38,6 +38,36 @@ class Customer(Base):
         back_populates="customer",
         cascade="all, delete-orphan",
     )
+    measurements: Mapped[list["CustomerMeasurement"]] = relationship(
+        back_populates="customer",
+        cascade="all, delete-orphan",
+        order_by="CustomerMeasurement.created_at.desc()",
+    )
+
+
+class CustomerMeasurement(Base):
+    """Saved custom size (inches) for reuse on later orders."""
+
+    __tablename__ = "customer_measurements"
+    __table_args__ = (
+        UniqueConstraint(
+            "customer_id", "length", "chest", name="uq_customer_measurement"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    customer_id: Mapped[int] = mapped_column(
+        ForeignKey("customers.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    length: Mapped[str] = mapped_column(String(50), nullable=False)
+    chest: Mapped[str] = mapped_column(String(50), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc), nullable=False
+    )
+
+    customer: Mapped["Customer"] = relationship(back_populates="measurements")
 
 
 class CustomerSession(Base):

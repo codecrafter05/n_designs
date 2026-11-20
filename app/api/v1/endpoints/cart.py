@@ -7,8 +7,10 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.api.v1.endpoints.web import _fmt_bhd, _payable
 from app.core.cart import get_or_create_cart, reload_cart, set_cart_cookie
+from app.core.customer_auth import get_current_customer
 from app.core.database import get_db
 from app.core.discounts import GENERIC_INVALID, cart_pricing, find_code, is_usable
+from app.core.measurements import normalize_inches, save_customer_measurement, size_label
 from app.models.cart import Cart, CartItem
 from app.models.product import Product, ProductColor, ProductVariant
 
@@ -18,6 +20,11 @@ router = APIRouter(tags=["cart"])
 class AddIn(BaseModel):
     product_variant_id: int
     quantity: int = 1
+    is_custom: bool = False
+    custom_length: str = ""
+    custom_chest: str = ""
+    line_comment: str = ""
+    save_measurement: bool = False
 
 
 class UpdateIn(BaseModel):
@@ -73,6 +80,29 @@ def _load_variant(db: Session, variant_id: int) -> ProductVariant | None:
     )
 
 
+def _norm_comment(value: str | None) -> str | None:
+    text = (value or "").strip()
+    return text or None
+
+
+def _item_matches(
+    item: CartItem,
+    *,
+    variant_id: int,
+    is_custom: bool,
+    custom_length: str | None,
+    custom_chest: str | None,
+    line_comment: str | None,
+) -> bool:
+    return (
+        item.product_variant_id == variant_id
+        and bool(item.is_custom) == bool(is_custom)
+        and (item.custom_length or None) == (custom_length or None)
+        and (item.custom_chest or None) == (custom_chest or None)
+        and (item.line_comment or None) == (line_comment or None)
+    )
+
+
 def _item_info(item: CartItem) -> dict:
     variant = item.variant
     color = variant.color if variant else None
@@ -80,6 +110,12 @@ def _item_info(item: CartItem) -> dict:
     thumb = None
     if product and product.images:
         thumb = product.images[0].image_url
+    label = size_label(
+        is_custom=bool(item.is_custom),
+        custom_length=item.custom_length,
+        custom_chest=item.custom_chest,
+        variant_size=variant.size if variant else "",
+    )
     return {
         "id": item.id,
         "product_variant_id": item.product_variant_id,
@@ -87,7 +123,12 @@ def _item_info(item: CartItem) -> dict:
         "name": product.name if product else "",
         "image": thumb,
         "color": color.color_name if color else "",
-        "size": variant.size if variant else "",
+        "size": label,
+        "is_custom": bool(item.is_custom),
+        "custom_length": item.custom_length or "",
+        "custom_chest": item.custom_chest or "",
+        "line_comment": item.line_comment or "",
+        "save_measurement": bool(item.save_measurement),
     }
 
 
@@ -106,9 +147,32 @@ def cart_add(body: AddIn, request: Request, db: Session = Depends(get_db)):
     if variant.stock_quantity <= 0:
         return _error("This size is out of stock.")
 
+    is_custom = bool(body.is_custom)
+    custom_length = normalize_inches(body.custom_length) if is_custom else None
+    custom_chest = normalize_inches(body.custom_chest) if is_custom else None
+    line_comment = _norm_comment(body.line_comment)
+    save_measurement = bool(body.save_measurement) if is_custom else False
+
+    if is_custom:
+        if not custom_length or not custom_chest:
+            return _error("Please enter Item Length and Chest for a custom size.")
+        custom_length = custom_length[:50]
+        custom_chest = custom_chest[:50]
+
     cart, token, needs_cookie = get_or_create_cart(db, request)
     existing = next(
-        (item for item in cart.items if item.product_variant_id == variant.id),
+        (
+            item
+            for item in cart.items
+            if _item_matches(
+                item,
+                variant_id=variant.id,
+                is_custom=is_custom,
+                custom_length=custom_length,
+                custom_chest=custom_chest,
+                line_comment=line_comment,
+            )
+        ),
         None,
     )
     new_qty = (existing.quantity if existing else 0) + qty
@@ -120,15 +184,50 @@ def cart_add(body: AddIn, request: Request, db: Session = Depends(get_db)):
 
     if existing:
         existing.quantity = new_qty
+        if save_measurement:
+            existing.save_measurement = True
         line = existing
     else:
-        line = CartItem(cart_id=cart.id, product_variant_id=variant.id, quantity=qty)
+        line = CartItem(
+            cart_id=cart.id,
+            product_variant_id=variant.id,
+            quantity=qty,
+            is_custom=is_custom,
+            custom_length=custom_length,
+            custom_chest=custom_chest,
+            line_comment=line_comment,
+            save_measurement=save_measurement,
+        )
         db.add(line)
         cart.items.append(line)
+
+    customer = get_current_customer(request, db)
+    if customer is not None and save_measurement and is_custom:
+        save_customer_measurement(
+            db,
+            customer,
+            length=custom_length or "",
+            chest=custom_chest or "",
+        )
+
     _touch(cart)
     db.commit()
     cart = reload_cart(db, cart.id)
-    line = next((item for item in cart.items if item.product_variant_id == variant.id), line)
+    line = next(
+        (
+            item
+            for item in cart.items
+            if _item_matches(
+                item,
+                variant_id=variant.id,
+                is_custom=is_custom,
+                custom_length=custom_length,
+                custom_chest=custom_chest,
+                line_comment=line_comment,
+            )
+        ),
+        line,
+    )
     return _json(cart, token, needs_cookie, {"item": _item_info(line)})
 
 
@@ -175,6 +274,11 @@ def cart_remove(body: RemoveIn, request: Request, db: Session = Depends(get_db))
     undo = {
         "product_variant_id": item.product_variant_id,
         "quantity": item.quantity,
+        "is_custom": bool(item.is_custom),
+        "custom_length": item.custom_length or "",
+        "custom_chest": item.custom_chest or "",
+        "line_comment": item.line_comment or "",
+        "save_measurement": bool(item.save_measurement),
     }
     db.delete(item)
     _touch(cart)

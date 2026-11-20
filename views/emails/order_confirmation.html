@@ -39,6 +39,7 @@
                     <div style="font-size:15px;color:#131210;">{{ line.name }}</div>
                     <div style="font-size:12px;color:#8a8478;margin-top:4px;">
                       {{ line.color }} · Size {{ line.size }} · Qty {{ line.quantity }}
+                      {% if line.line_comment %}<br>Note: {{ line.line_comment }}{% endif %}
                     </div>
                   </td>
                   <td align="right" valign="top" style="padding:14px 0;border-bottom:1px solid #e4dfd3;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#131210;white-space:nowrap;">

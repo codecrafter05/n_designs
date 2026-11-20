@@ -27,6 +27,9 @@
         <div class="ci-info">
           <a href="/product/{{ line.slug }}" class="name">{{ line.name }}</a>
           <div class="meta">{{ line.color }} · Size {{ line.size }}</div>
+          {% if line.line_comment %}
+          <div class="meta">Note: {{ line.line_comment }}</div>
+          {% endif %}
           <div class="ci-qty">
             <button type="button" data-qty="-1" aria-label="Decrease quantity">−</button>
             <span data-qty-value>{{ line.quantity }}</span>

@@ -33,7 +33,7 @@
                 {% for line in items %}
                 <tr>
                   <td style="padding:10px 0;border-bottom:1px solid #e4dfd3;color:#131210;">
-                    {{ line.name }} · {{ line.color }} · {{ line.size }} × {{ line.quantity }}
+                    {{ line.name }} · {{ line.color }} · {{ line.size }} × {{ line.quantity }}{% if line.line_comment %}<br><span style="color:#8a8478;">Note: {{ line.line_comment }}</span>{% endif %}
                   </td>
                   <td align="right" style="padding:10px 0;border-bottom:1px solid #e4dfd3;color:#131210;white-space:nowrap;">
                     {{ line.line_label }}

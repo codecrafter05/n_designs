@@ -22,6 +22,7 @@ from app.core.form_protection import (
     is_rate_limited,
     silent_reject,
 )
+from app.core.measurements import customer_measurements_payload, size_label
 from app.core.security import hash_password
 from app.core.orders import (
     PAYMENT_TAP,
@@ -348,6 +349,13 @@ def _cart_lines(cart) -> tuple[list[dict], Decimal]:
         on_sale = _is_on_sale(variant)
         line_total = payable * item.quantity
         subtotal += line_total
+        label = size_label(
+            is_custom=bool(getattr(item, "is_custom", False)),
+            custom_length=getattr(item, "custom_length", None),
+            custom_chest=getattr(item, "custom_chest", None),
+            variant_size=variant.size,
+        )
+        comment = (getattr(item, "line_comment", None) or "").strip()
         lines.append(
             {
                 "id": item.id,
@@ -356,7 +364,8 @@ def _cart_lines(cart) -> tuple[list[dict], Decimal]:
                 "name": product.name,
                 "slug": product.slug,
                 "color": variant.color.color_name,
-                "size": variant.size,
+                "size": label,
+                "line_comment": comment,
                 "thumb": product.images[0].image_url if product.images else None,
                 "unit_label": _fmt_bhd(payable),
                 "was_label": _fmt_bhd(variant.price) if on_sale else "",
@@ -586,6 +595,7 @@ def storefront_product(request: Request, slug: str, db: Session = Depends(get_db
         f"{settings.whatsapp_url}"
         f"?text={quote(f'Hi, I am interested in {product.name}')}"
     )
+    customer = get_current_customer(request, db)
     return _storefront_page(
         request,
         "storefront/product.html",
@@ -593,6 +603,9 @@ def storefront_product(request: Request, slug: str, db: Session = Depends(get_db
         product=product,
         parent=parent,
         catalog_json=_pdp_payload(product),
+        saved_measurements_json=json.dumps(
+            customer_measurements_payload(customer)
+        ),
         whatsapp_url=ask_url,
         available=any(color.variants for color in product.colors),
     )
@@ -1157,11 +1170,20 @@ def storefront_order_confirmation(
         variant = item.variant
         color = variant.color if variant else None
         product = color.product if color else None
+        label = size_label(
+            is_custom=bool(getattr(item, "is_custom", False)),
+            custom_length=getattr(item, "custom_length", None),
+            custom_chest=getattr(item, "custom_chest", None),
+            variant_size=variant.size if variant else "",
+            stored_label=getattr(item, "size_label", None),
+        )
+        comment = (getattr(item, "line_comment", None) or "").strip()
         items.append(
             {
                 "name": product.name if product else "Item",
                 "color": color.color_name if color else "",
-                "size": variant.size if variant else "",
+                "size": label,
+                "line_comment": comment,
                 "quantity": item.quantity,
                 "line_label": _fmt_bhd(
                     Decimal(str(item.price_at_purchase)) * item.quantity

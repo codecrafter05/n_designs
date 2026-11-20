@@ -58,9 +58,31 @@
         <div class="sizes" id="sizes"></div>
         <div class="fit-fields" id="fitFields" hidden>
           <select class="fit-select" id="lengthSelect" aria-label="Length"></select>
-          <label class="fit-body-label" for="bodySelect">Body size</label>
+          <label class="fit-body-label" for="bodySelect" id="bodyLabel">Body size</label>
           <select class="fit-select" id="bodySelect" aria-label="Body size"></select>
         </div>
+        <div class="custom-size" id="customSize" hidden>
+          <div class="custom-size-grid">
+            <div class="field">
+              <label for="customLength">Item Length</label>
+              <input id="customLength" type="text" inputmode="decimal" placeholder="Inches" autocomplete="off">
+            </div>
+            <div class="field">
+              <label for="customChest">Chest</label>
+              <input id="customChest" type="text" inputmode="decimal" placeholder="Inches" autocomplete="off">
+            </div>
+          </div>
+          <label class="custom-save" for="saveMeasurement">
+            <input type="checkbox" id="saveMeasurement">
+            <span>Save Measurement</span>
+          </label>
+          <p class="custom-hint">Please mention if the measurements entered are based on item or body size.</p>
+        </div>
+      </div>
+
+      <div class="opt-block">
+        <label class="opt-label" for="lineComment">Additional Comments</label>
+        <textarea class="pdp-comment" id="lineComment" rows="3" placeholder="Additional Comments"></textarea>
       </div>
 
       <div class="pdp-actions">
@@ -121,11 +143,18 @@
 <script>
 (function () {
   var CATALOG = JSON.parse({{ catalog_json | tojson }});
+  var SAVED = JSON.parse({{ saved_measurements_json | tojson }});
   var swatchesEl = document.getElementById('swatches');
   var sizesEl = document.getElementById('sizes');
   var fitFields = document.getElementById('fitFields');
   var lengthSelect = document.getElementById('lengthSelect');
   var bodySelect = document.getElementById('bodySelect');
+  var bodyLabel = document.getElementById('bodyLabel');
+  var customSize = document.getElementById('customSize');
+  var customLength = document.getElementById('customLength');
+  var customChest = document.getElementById('customChest');
+  var saveMeasurement = document.getElementById('saveMeasurement');
+  var lineComment = document.getElementById('lineComment');
   var priceEl = document.getElementById('pdpPrice');
   var colorLabel = document.getElementById('colorLabel');
   var sizeLabel = document.getElementById('sizeLabel');
@@ -133,6 +162,7 @@
   var sizeIndex = 0;
   var chosenLength = '';
   var chosenBody = '';
+  var mode = 'standard';
   var addBtn = document.getElementById('addToBag');
 
   function firstInStock(variants) {
@@ -140,6 +170,11 @@
       if (variants[i].stock > 0) return i;
     }
     return 0;
+  }
+
+  function firstStockedVariant(variants) {
+    var idx = firstInStock(variants);
+    return variants[idx] || null;
   }
 
   function renderPrice(variant) {
@@ -163,8 +198,13 @@
     return variants.length > 0 && variants.every(function (variant) { return variant.length; });
   }
 
+  function isCustomMode() {
+    return mode === 'custom' || mode === 'saved';
+  }
+
   function selectedVariant() {
     var variants = currentVariants();
+    if (isCustomMode()) return firstStockedVariant(variants);
     if (usesFit(variants)) {
       for (var i = 0; i < variants.length; i++) {
         if (variants[i].length === chosenLength && variants[i].body === chosenBody) return variants[i];
@@ -185,6 +225,35 @@
     });
   }
 
+  function syncCustomFields() {
+    var show = isCustomMode();
+    if (customSize) customSize.hidden = !show;
+    if (bodyLabel) bodyLabel.hidden = show;
+    if (bodySelect) bodySelect.hidden = show;
+    if (!show) {
+      if (customLength) customLength.value = '';
+      if (customChest) customChest.value = '';
+      if (saveMeasurement) saveMeasurement.checked = false;
+    }
+    syncAddButton();
+  }
+
+  function syncAddButton() {
+    if (!addBtn) return;
+    var selected = selectedVariant();
+    if (!(selected && selected.stock > 0)) {
+      addBtn.disabled = true;
+      return;
+    }
+    if (isCustomMode()) {
+      var length = (customLength && customLength.value || '').trim();
+      var chest = (customChest && customChest.value || '').trim();
+      addBtn.disabled = !(length && chest);
+      return;
+    }
+    addBtn.disabled = false;
+  }
+
   function renderFit(variants) {
     sizesEl.hidden = true;
     sizesEl.innerHTML = '';
@@ -193,11 +262,62 @@
     variants.forEach(function (variant) {
       if (lengths.indexOf(variant.length) === -1) lengths.push(variant.length);
     });
-    if (lengths.indexOf(chosenLength) === -1) {
+    var options = ['__custom__'].concat(lengths);
+    (SAVED || []).forEach(function (row) {
+      options.push('__saved__:' + row.id);
+    });
+    if (mode === 'custom') chosenLength = '__custom__';
+    else if (mode === 'saved' && chosenLength.indexOf('__saved__:') !== 0) chosenLength = options[0];
+    else if (lengths.indexOf(chosenLength) === -1 && chosenLength.indexOf('__saved__:') !== 0 && chosenLength !== '__custom__') {
       var start = variants[firstInStock(variants)];
       chosenLength = start ? start.length : lengths[0];
+      mode = 'standard';
     }
-    fillSelect(lengthSelect, lengths, chosenLength, function (value) { return value; });
+    lengthSelect.innerHTML = '';
+    var customOpt = document.createElement('option');
+    customOpt.value = '__custom__';
+    customOpt.textContent = 'Custom';
+    if (chosenLength === '__custom__') customOpt.selected = true;
+    lengthSelect.appendChild(customOpt);
+    (SAVED || []).forEach(function (row) {
+      var opt = document.createElement('option');
+      opt.value = '__saved__:' + row.id;
+      opt.textContent = row.label;
+      if (chosenLength === opt.value) opt.selected = true;
+      lengthSelect.appendChild(opt);
+    });
+    lengths.forEach(function (value) {
+      var option = document.createElement('option');
+      option.value = value;
+      option.textContent = value;
+      if (value === chosenLength) option.selected = true;
+      lengthSelect.appendChild(option);
+    });
+
+    if (chosenLength === '__custom__') {
+      mode = 'custom';
+      syncCustomFields();
+      sizeLabel.textContent = 'Size — Custom';
+      renderPrice(firstStockedVariant(variants));
+      return;
+    }
+    if (String(chosenLength).indexOf('__saved__:') === 0) {
+      mode = 'saved';
+      var savedId = String(chosenLength).split(':')[1];
+      var saved = (SAVED || []).filter(function (row) { return String(row.id) === String(savedId); })[0];
+      if (saved) {
+        if (customLength) customLength.value = saved.length;
+        if (customChest) customChest.value = saved.chest;
+        if (saveMeasurement) saveMeasurement.checked = false;
+      }
+      syncCustomFields();
+      sizeLabel.textContent = 'Size — Saved';
+      renderPrice(firstStockedVariant(variants));
+      return;
+    }
+
+    mode = 'standard';
+    syncCustomFields();
     var bodies = variants.filter(function (variant) { return variant.length === chosenLength; });
     var bodyValues = bodies.map(function (variant) { return variant.body; });
     if (bodyValues.indexOf(chosenBody) === -1) {
@@ -219,7 +339,7 @@
     var selected = selectedVariant();
     sizeLabel.textContent = 'Length';
     renderPrice(selected);
-    if (addBtn) addBtn.disabled = !(selected && selected.stock > 0);
+    syncAddButton();
   }
 
   function renderSizes() {
@@ -236,10 +356,39 @@
     if (!variants.length) {
       sizeLabel.textContent = 'Size';
       sizesEl.innerHTML = '<p class="pdp-unavailable">No sizes for this colour</p>';
+      mode = 'standard';
+      syncCustomFields();
       renderPrice(null);
       return;
     }
     if (sizeIndex >= variants.length) sizeIndex = firstInStock(variants);
+
+    var customPill = document.createElement('span');
+    customPill.className = 'size-pill' + (mode === 'custom' ? ' is-active' : '');
+    customPill.textContent = 'Custom';
+    customPill.addEventListener('click', function () {
+      mode = 'custom';
+      renderSizes();
+    });
+    sizesEl.appendChild(customPill);
+
+    (SAVED || []).forEach(function (row) {
+      var pill = document.createElement('span');
+      var active = mode === 'saved' && chosenLength === '__saved__:' + row.id;
+      pill.className = 'size-pill' + (active ? ' is-active' : '');
+      pill.textContent = 'Saved ' + row.length + '/' + row.chest;
+      pill.title = row.label;
+      pill.addEventListener('click', function () {
+        mode = 'saved';
+        chosenLength = '__saved__:' + row.id;
+        if (customLength) customLength.value = row.length;
+        if (customChest) customChest.value = row.chest;
+        if (saveMeasurement) saveMeasurement.checked = false;
+        renderSizes();
+      });
+      sizesEl.appendChild(pill);
+    });
+
     variants.forEach(function (variant, i) {
       var pill = document.createElement('span');
       pill.className = 'size-pill';
@@ -247,23 +396,39 @@
       if (variant.stock <= 0) {
         pill.classList.add('is-out');
         pill.title = 'Out of Stock';
-      } else if (i === sizeIndex) {
+      } else if (mode === 'standard' && i === sizeIndex) {
         pill.classList.add('is-active');
       }
       if (variant.stock > 0) {
         pill.addEventListener('click', function () {
+          mode = 'standard';
           sizeIndex = i;
           renderSizes();
         });
       }
       sizesEl.appendChild(pill);
     });
+
+    if (mode === 'custom' || mode === 'saved') {
+      if (mode === 'saved') {
+        var sid = String(chosenLength).split(':')[1];
+        var savedRow = (SAVED || []).filter(function (row) { return String(row.id) === String(sid); })[0];
+        if (savedRow) {
+          if (customLength) customLength.value = savedRow.length;
+          if (customChest) customChest.value = savedRow.chest;
+        }
+      }
+      syncCustomFields();
+      sizeLabel.textContent = mode === 'custom' ? 'Size — Custom' : 'Size — Saved';
+      renderPrice(firstStockedVariant(variants));
+      return;
+    }
+
+    syncCustomFields();
     var selected = variants[sizeIndex];
     sizeLabel.textContent = selected ? 'Size — ' + selected.size : 'Size — Select';
     renderPrice(selected);
-    if (addBtn) {
-      addBtn.disabled = !(selected && selected.stock > 0);
-    }
+    syncAddButton();
   }
 
   function renderSwatches() {
@@ -279,6 +444,7 @@
         sizeIndex = firstInStock(color.variants || []);
         chosenLength = '';
         chosenBody = '';
+        mode = 'standard';
         renderSwatches();
         renderSizes();
       });
@@ -292,6 +458,9 @@
     lengthSelect.addEventListener('change', function () {
       chosenLength = lengthSelect.value;
       chosenBody = '';
+      if (chosenLength === '__custom__') mode = 'custom';
+      else if (String(chosenLength).indexOf('__saved__:') === 0) mode = 'saved';
+      else mode = 'standard';
       renderSizes();
     });
   }
@@ -301,6 +470,8 @@
       renderSizes();
     });
   }
+  if (customLength) customLength.addEventListener('input', syncAddButton);
+  if (customChest) customChest.addEventListener('input', syncAddButton);
 
   if (CATALOG.colors && CATALOG.colors.length) {
     sizeIndex = firstInStock(CATALOG.colors[0].variants || []);
@@ -340,15 +511,36 @@
     addBtn.addEventListener('click', function () {
       var variant = selectedVariant();
       if (!variant || variant.stock <= 0) return;
+      var payload = {
+        product_variant_id: variant.id,
+        quantity: 1,
+        is_custom: false,
+        custom_length: '',
+        custom_chest: '',
+        line_comment: (lineComment && lineComment.value || '').trim(),
+        save_measurement: false
+      };
+      if (isCustomMode()) {
+        payload.is_custom = true;
+        payload.custom_length = (customLength && customLength.value || '').trim();
+        payload.custom_chest = (customChest && customChest.value || '').trim();
+        payload.save_measurement = !!(saveMeasurement && saveMeasurement.checked);
+        if (!payload.custom_length || !payload.custom_chest) {
+          if (window.showStorefrontToast) {
+            window.showStorefrontToast('Please enter Item Length and Chest.');
+          }
+          return;
+        }
+      }
       addBtn.disabled = true;
       fetch('/cart/add', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ product_variant_id: variant.id, quantity: 1 })
+        body: JSON.stringify(payload)
       })
         .then(function (res) { return res.json().then(function (data) { return { ok: res.ok, data: data }; }); })
         .then(function (result) {
-          addBtn.disabled = false;
+          syncAddButton();
           if (!result.ok || !result.data.ok) {
             if (window.showStorefrontToast) {
               window.showStorefrontToast(result.data.error || 'Could not add this piece.');
@@ -361,7 +553,7 @@
           if (window.updateCartBadge) window.updateCartBadge(result.data.count);
         })
         .catch(function () {
-          addBtn.disabled = false;
+          syncAddButton();
           if (window.showStorefrontToast) {
             window.showStorefrontToast('Could not add this piece. Try again.');
           }
