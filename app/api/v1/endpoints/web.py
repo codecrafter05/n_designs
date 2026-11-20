@@ -16,7 +16,6 @@ from app.core.config import Settings, settings
 from app.core.customer_auth import create_customer_session, get_current_customer
 from app.core.database import get_db
 from app.core.discounts import REMOVED_AT_CHECKOUT, cart_pricing
-from app.core.math_captcha import CAPTCHA_WRONG, answer_is_correct, new_challenge
 from app.core.form_protection import (
     RATE_LIMIT_MESSAGE,
     honeypot_filled,
@@ -25,7 +24,6 @@ from app.core.form_protection import (
 )
 from app.core.security import hash_password
 from app.core.orders import (
-    PAYMENT_COD,
     PAYMENT_TAP,
     SHIPPING_BHD,
     CheckoutBlocked,
@@ -653,10 +651,6 @@ def _form_from_customer(customer: Customer, country_names: list[str]) -> dict:
     )
 
 
-def _is_bahrain(country: str) -> bool:
-    return (country or "").strip().lower() == "bahrain"
-
-
 def _checkout_page(
     request: Request,
     db: Session,
@@ -676,12 +670,6 @@ def _checkout_page(
     if form is None and customer is not None:
         form = _form_from_customer(customer, names)
     form = _checkout_form(form, country_names=names)
-    cod_allowed = _is_bahrain(form["country"])
-    chosen_payment = payment_method if payment_method in ("cod", "online") else ""
-    if chosen_payment == "cod" and not cod_allowed:
-        chosen_payment = "online"
-    if not chosen_payment:
-        chosen_payment = "cod" if cod_allowed else "online"
     shipping = None
     shipping_available = True
     shipping_message = None
@@ -713,9 +701,7 @@ def _checkout_page(
         checkout_error=error,
         logged_in=customer is not None,
         create_account=create_account,
-        payment_method=chosen_payment,
-        cod_allowed=cod_allowed,
-        captcha=new_challenge(),
+        payment_method="online",
         account_offer=account_discount > 0,
         account_offer_label=_fmt_bhd(account_discount),
         **promo,
@@ -881,16 +867,13 @@ def checkout_check_email(email: str = "", db: Session = Depends(get_db)):
 def storefront_checkout(request: Request, db: Session = Depends(get_db)):
     error = None
     if request.query_params.get("payment_error") == "1":
-        error = (
-            "Payment was not completed — please try again or choose Cash on Delivery"
-        )
+        error = "Payment was not completed — please try again"
     return _checkout_page(request, db, error=error)
 
 
 @router.post("/checkout", include_in_schema=False)
 def storefront_checkout_submit(
     request: Request,
-    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     email: str = Form(""),
     first_name: str = Form(""),
@@ -899,12 +882,10 @@ def storefront_checkout_submit(
     city: str = Form(""),
     country: str = Form(""),
     phone: str = Form(""),
-    payment_method: str = Form("cod"),
+    payment_method: str = Form("online"),
     create_account: str = Form(""),
     account_password: str = Form(""),
     website_url: str = Form(""),
-    captcha_token: str = Form(""),
-    captcha_answer: str = Form(""),
 ):
     names = country_names(load_country_groups(db))
     form = _checkout_form(
@@ -929,7 +910,7 @@ def storefront_checkout_submit(
             form=form,
             error=message,
             create_account=want_account,
-            payment_method=payment_method,
+            payment_method="online",
         )
 
     if honeypot_filled(website_url):
@@ -954,12 +935,8 @@ def storefront_checkout_submit(
         return fail("Please fill in: " + ", ".join(missing) + ".")
     if "@" not in form["email"]:
         return fail("Please enter a valid email.")
-    if payment_method not in ("cod", "online"):
-        return fail("Please choose a payment method.")
-    if payment_method == "cod" and not _is_bahrain(form["country"]):
-        return fail("Cash on delivery is available in Bahrain only.")
-    if payment_method == "cod" and not answer_is_correct(captcha_token, captcha_answer):
-        return fail(CAPTCHA_WRONG)
+    if payment_method != "online":
+        return fail("Please pay online to complete your order.")
     if want_account and len(account_password) < 8:
         return fail("Password must be at least 8 characters.")
     chosen = canonical_country_name(db, country)
@@ -986,61 +963,22 @@ def storefront_checkout_submit(
         db.rollback()
         return fail("Something went wrong, please try again.")
 
-    if payment_method == "online":
-        try:
-            pay_url = _start_tap_checkout(
-                db,
-                prepared,
-                form,
-                logged_in,
-                want_account,
-                account_password,
-            )
-        except Exception:
-            db.rollback()
-            logger.warning("Tap checkout start failed", exc_info=True)
-            return fail(TAP_START_ERROR)
-        if not pay_url:
-            return fail(TAP_START_ERROR)
-        return RedirectResponse(url=pay_url, status_code=302)
-
     try:
-        result = finalize_order(
+        pay_url = _start_tap_checkout(
             db,
-            form=form,
-            lines=prepared.lines,
-            subtotal=prepared.subtotal,
-            shipping=prepared.shipping,
-            applied_discount=prepared.applied_discount,
-            total=prepared.total,
-            discount_row=prepared.discount_row,
-            cart=prepared.cart,
-            logged_in=logged_in,
-            want_account=want_account,
-            account_password=account_password,
-            payment_method=PAYMENT_COD,
-            background_tasks=background_tasks,
+            prepared,
+            form,
+            logged_in,
+            want_account,
+            account_password,
         )
-    except CheckoutFailed as exc:
-        db.rollback()
-        return fail(exc.message)
-    except CheckoutDiscountGone:
-        db.rollback()
-        return fail(REMOVED_AT_CHECKOUT)
-    except CheckoutBlocked as exc:
-        db.rollback()
-        return fail(exc.message)
     except Exception:
         db.rollback()
-        return fail("Something went wrong, please try again.")
-
-    response = RedirectResponse(
-        url=f"/order-confirmation/{result.order.id}", status_code=303
-    )
-    response.background = background_tasks
-    if result.login_after and result.customer is not None:
-        create_customer_session(response, db, result.customer)
-    return response
+        logger.warning("Tap checkout start failed", exc_info=True)
+        return fail(TAP_START_ERROR)
+    if not pay_url:
+        return fail(TAP_START_ERROR)
+    return RedirectResponse(url=pay_url, status_code=302)
 
 
 @router.get(
