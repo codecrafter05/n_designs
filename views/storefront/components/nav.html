@@ -8,9 +8,10 @@
       </svg>
     </button>
     <a href="/" class="nav-link">Home</a>
-    <a href="/collections" class="nav-link">Collections</a>
+    <a href="/categories" class="nav-link">Categories</a>
     <a href="/sale" class="nav-link">Sale</a>
-    <a href="/about" class="nav-link">About</a>
+    <a href="/about" class="nav-link">About Us</a>
+    <a href="{{ whatsapp_url }}" class="nav-link">Contact Us</a>
   </div>
   <a href="/" class="nav-logo">
     <img src="/static/img/logo/{% if variant == 'hero' %}logo-light-one.png{% else %}logo-dark-one.png{% endif %}" alt="By N Designs" id="navLogo">
@@ -44,9 +45,10 @@
   </div>
   <nav class="nav-drawer-links">
     <a href="/">Home</a>
-    <a href="/collections">Collections</a>
+    <a href="/categories">Categories</a>
     <a href="/sale">Sale</a>
-    <a href="/about">About</a>
+    <a href="/about">About Us</a>
+    <a href="{{ whatsapp_url }}">Contact Us</a>
     {% if current_customer %}
     <a href="/account">Account</a>
     {% else %}
